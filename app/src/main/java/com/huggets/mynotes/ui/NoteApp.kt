@@ -1,5 +1,6 @@
 package com.huggets.mynotes.ui
 
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,43 +26,45 @@ fun NoteApp(
     noteViewModel.fetchNotes()
 
     AppTheme {
-        NavHost(
-            navController = navigationController,
-            startDestination = Destinations.generateViewNoteList(),
-        ) {
-            composable(Destinations.viewNoteListRoute) {
-                ViewNoteList(
-                    changeOnBackPressedCallback,
-                    quitApplication,
-                    navigationController,
-                    appState
-                )
-            }
-            composable(Destinations.editNoteRoute) { backStackEntry ->
-                val isNewNote =
-                    backStackEntry.arguments?.getString(Destinations.ParametersName.isNewNote)!!
-                        .toBoolean()
-                val noteId =
-                    backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
-                        .toInt()
-                val saveNote: (NoteItemUiState) -> Unit = {
-                    noteViewModel.saveNote(it)
-                    noteViewModel.fetchNotes()
+        Surface {
+            NavHost(
+                navController = navigationController,
+                startDestination = Destinations.generateViewNoteList(),
+            ) {
+                composable(Destinations.viewNoteListRoute) {
+                    ViewNoteList(
+                        changeOnBackPressedCallback,
+                        quitApplication,
+                        navigationController,
+                        appState
+                    )
                 }
-                val deleteNote: (Int) -> Unit = {
-                    noteViewModel.deleteNote(it)
-                    noteViewModel.fetchNotes()
-                }
+                composable(Destinations.editNoteRoute) { backStackEntry ->
+                    val isNewNote =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.isNewNote)!!
+                            .toBoolean()
+                    val noteId =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
+                            .toInt()
+                    val saveNote: (NoteItemUiState) -> Unit = {
+                        noteViewModel.saveNote(it)
+                        noteViewModel.fetchNotes()
+                    }
+                    val deleteNote: (Int) -> Unit = {
+                        noteViewModel.deleteNote(it)
+                        noteViewModel.fetchNotes()
+                    }
 
-                EditNote(
-                    changeOnBackPressedCallback,
-                    navigationController,
-                    appState,
-                    noteId,
-                    isNewNote,
-                    saveNote,
-                    deleteNote
-                )
+                    EditNote(
+                        changeOnBackPressedCallback,
+                        navigationController,
+                        appState,
+                        noteId,
+                        isNewNote,
+                        saveNote,
+                        deleteNote
+                    )
+                }
             }
         }
     }
