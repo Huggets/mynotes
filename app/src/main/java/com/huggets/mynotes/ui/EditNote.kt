@@ -1,5 +1,7 @@
 package com.huggets.mynotes.ui
 
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -9,7 +11,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.note.NoteAppUiState
@@ -21,10 +25,9 @@ import com.huggets.mynotes.theme.*
  * Edit a new note if newNote is true. Otherwise edit an existing one,
  * contained in notes.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun EditNote(
-    changeOnBackPressedCallback: (() -> Unit) -> Unit,
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     noteId: Int,
@@ -32,13 +35,30 @@ fun EditNote(
     saveNote: (NoteItemUiState) -> Unit,
     deleteNote: (noteId: Int) -> Unit,
 ) {
-    val onBackPressed: () -> Unit = {
-        navigationController.navigateUp()
-    }
-    changeOnBackPressedCallback(onBackPressed)
-
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     var isDeleting by rememberSaveable { mutableStateOf(false) }
+    var showCancelConfirmation by rememberSaveable { mutableStateOf(false) }
+
+    val onBackPressed = remember {
+        object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                showCancelConfirmation = true
+            }
+        }
+    }
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, backDispatcher) {
+        backDispatcher?.onBackPressedDispatcher?.addCallback(
+            lifecycleOwner,
+            onBackPressed
+        )
+
+        onDispose {
+            onBackPressed.remove()
+        }
+    }
 
     if (isDeleted) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -70,6 +90,27 @@ fun EditNote(
             )
         }
 
+        if (showCancelConfirmation) {
+            val onDismiss: () -> Unit = { showCancelConfirmation = false }
+            val onConfirm: () -> Unit = {
+                showCancelConfirmation = false
+                navigationController.navigateUp()
+            }
+
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                confirmButton = {
+                    Button(onClick = onConfirm) { Text("Yes") }
+                },
+                dismissButton = {
+                    Button(onClick = onDismiss) { Text("No") }
+                },
+                text = {
+                    Text("Cancel changes?")
+                }
+            )
+        }
+
         val note = if (isNewNote) {
             NoteItemUiState(0, "", "")
         } else {
@@ -87,44 +128,34 @@ fun EditNote(
             isDeleting = true
         }
 
-        BoxWithConstraints {
-            val fabPosition =
-                if (this.maxWidth < Value.Fab.minWidthRequiredFabToLeft) FabPosition.Center
-                else FabPosition.End
-
-            Scaffold(
-                topBar = { EditNoteAppBar(onDelete = onDelete) },
-                floatingActionButton = {
-                    EditNoteFab(onSave, this)
-                },
-                floatingActionButtonPosition = fabPosition,
-            ) { paddingValues ->
-                Column(
-                    Modifier
-                        .padding(paddingValues)
-                        .fillMaxWidth()
-                        .padding(Value.smallPadding)
-                ) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        singleLine = true,
-                        label = {
-                            Text("Title")
-                        },
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        label = {
-                            Text("Content")
-                        },
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+        Scaffold(
+            topBar = { EditNoteAppBar(onDelete = onDelete, onSave = onSave) },
+        ) { paddingValues ->
+            Column(
+                Modifier
+                    .padding(paddingValues)
+                    .fillMaxWidth()
+                    .padding(Value.smallPadding)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    singleLine = true,
+                    label = {
+                        Text("Title")
+                    },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = { content = it },
+                    label = {
+                        Text("Content")
+                    },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
@@ -134,6 +165,7 @@ fun EditNote(
 @Composable
 private fun EditNoteAppBar(
     onDelete: () -> Unit,
+    onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -142,28 +174,10 @@ private fun EditNoteAppBar(
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, "Delete note")
             }
+            IconButton(onClick = onSave) {
+                Icon(Icons.Filled.Done, "Save note")
+            }
         },
         modifier = modifier,
     )
-}
-
-@Composable
-private fun EditNoteFab(
-    onSave: () -> Unit,
-    constraintsScope: BoxWithConstraintsScope,
-    modifier: Modifier = Modifier,
-) {
-    val label = "Save note"
-    val icon: @Composable () -> Unit = { Icon(Icons.Filled.Done, label) }
-
-    if (constraintsScope.maxWidth < Value.Fab.minWidthRequiredExtendedFab) {
-        FloatingActionButton(onClick = onSave, modifier = modifier) {
-            icon.invoke()
-        }
-    } else {
-        ExtendedFloatingActionButton(onClick = onSave, modifier = modifier) {
-            icon.invoke()
-            Text(text = label)
-        }
-    }
 }

@@ -13,7 +13,6 @@ import com.huggets.mynotes.theme.AppTheme
 
 @Composable
 fun NoteApp(
-    changeOnBackPressedCallback: (() -> Unit) -> Unit,
     quitApplication: () -> Unit,
     noteViewModel: NoteViewModel = viewModel(),
 ) {
@@ -30,10 +29,9 @@ fun NoteApp(
             ) {
                 composable(Destinations.viewNoteListRoute) {
                     ViewNoteList(
-                        changeOnBackPressedCallback,
                         quitApplication,
                         navigationController,
-                        appState
+                        appState,
                     )
                 }
                 composable(Destinations.editNoteRoute) { backStackEntry ->
@@ -53,13 +51,12 @@ fun NoteApp(
                     }
 
                     EditNote(
-                        changeOnBackPressedCallback,
                         navigationController,
                         appState,
                         noteId,
                         isNewNote,
                         saveNote,
-                        deleteNote
+                        deleteNote,
                     )
                 }
             }

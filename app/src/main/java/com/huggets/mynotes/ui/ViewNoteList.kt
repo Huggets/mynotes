@@ -1,5 +1,7 @@
 package com.huggets.mynotes.ui
 
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -8,10 +10,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -23,23 +28,37 @@ import com.huggets.mynotes.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewNoteList(
-    changeOnBackPressedCallback: (() -> Unit) -> Unit,
     quitApplication: () -> Unit,
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
 ) {
-    // Navigate back or quit the application if the back stack is empty
-    val onBackPressed: () -> Unit = {
-        val navigationFailed = !navigationController.navigateUp()
-        if (navigationFailed) {
-            quitApplication()
+    val onBackPressed = remember {
+        object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val navigationFailed = !navigationController.navigateUp()
+                if (navigationFailed) {
+                    quitApplication()
+                }
+            }
         }
     }
-    changeOnBackPressedCallback(onBackPressed)
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, backDispatcher) {
+        backDispatcher?.onBackPressedDispatcher?.addCallback(
+            lifecycleOwner,
+            onBackPressed
+        )
+
+        onDispose {
+            onBackPressed.remove()
+        }
+    }
 
     BoxWithConstraints {
         val fabPosition =
-            if (this.maxWidth < Value.Fab.minWidthRequiredFabToLeft) FabPosition.Center
+            if (this.maxWidth < Value.Limit.minWidthRequiredFabToLeft) FabPosition.Center
             else FabPosition.End
 
         Scaffold(
@@ -155,7 +174,7 @@ private fun ViewNoteListFab(
     val label = "Add a new note"
     val icon: @Composable () -> Unit = { Icon(Icons.Filled.Add, label) }
 
-    if (constraintsScope.maxWidth < Value.Fab.minWidthRequiredExtendedFab) {
+    if (constraintsScope.maxWidth < Value.Limit.minWidthRequiredExtendedFab) {
         FloatingActionButton(onClick = openNewNote) {
             icon.invoke()
         }
