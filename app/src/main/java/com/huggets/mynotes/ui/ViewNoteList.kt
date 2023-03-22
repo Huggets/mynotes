@@ -1,10 +1,8 @@
 package com.huggets.mynotes.ui
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -13,12 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
 import com.huggets.mynotes.note.NoteAppUiState
 import com.huggets.mynotes.note.NoteItemUiState
+import com.huggets.mynotes.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +53,18 @@ private fun NoteList(
     modifier: Modifier = Modifier
 ) {
     if (appState.value.items.isEmpty()) {
-        Box(modifier = modifier.fillMaxWidth()) {
-            Text(text = "No notes", fontSize = 20.sp, modifier = Modifier.align(Alignment.Center))
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(smallPadding)
+        ) {
+            Text(
+                text = "No notes",
+                fontSize = 20.sp,
+                modifier = Modifier.align(Alignment.Center)
+            )
         }
+
     } else {
         LazyColumn(modifier = modifier.fillMaxWidth()) {
             for (note in appState.value.items) {
@@ -77,27 +86,44 @@ private fun NoteElement(
         navigationController.navigate(Destinations.generateEditNoteDestination(false, note.id))
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = openNote)
-            .padding(smallPadding)
-    ) {
-        val title = note.title.let {
-            if (it.isBlank()) "No title"
-            else shortened(it, 20)
-        }
-        val content = shortened(note.content, 120)
+    val color: Color
+    val contentColor: Color
+    if (isSystemInDarkTheme()) {
+        color = md_theme_dark_surfaceVariant
+        contentColor = md_theme_dark_onSurfaceVariant
+    } else {
+        color = md_theme_light_surfaceVariant
+        contentColor = md_theme_light_onSurfaceVariant
+    }
 
-        Text(
-            text = title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        Text(
-            text = content,
-            fontSize = 14.sp
-        )
+    Surface(
+        color = color,
+        contentColor = contentColor,
+        shape = ShapeDefaults.Small,
+        modifier = modifier.padding(smallPadding),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = openNote)
+                .padding(smallPadding)
+        ) {
+            val title = note.title.let {
+                if (it.isBlank()) "No title"
+                else shortened(it, 20)
+            }
+            val content = shortened(note.content, 120)
+
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = content,
+                fontSize = 16.sp
+            )
+        }
     }
 }
 

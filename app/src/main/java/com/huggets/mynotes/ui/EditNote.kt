@@ -1,6 +1,7 @@
 package com.huggets.mynotes.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
@@ -9,10 +10,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.note.NoteAppUiState
 import com.huggets.mynotes.note.NoteItemUiState
 import com.huggets.mynotes.note.find
+import com.huggets.mynotes.theme.*
 
 /**
  * Edit a new note if newNote is true. Otherwise edit an existing one,
@@ -97,22 +100,24 @@ fun EditNote(
                     .fillMaxWidth()
                     .padding(smallPadding)
             ) {
-                TextField(
+                OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
                     label = {
                         Text("Title")
                     },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                TextField(
+                OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
-                    modifier = Modifier.fillMaxWidth(),
                     label = {
                         Text("Content")
                     },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
