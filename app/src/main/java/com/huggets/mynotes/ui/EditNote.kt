@@ -87,38 +87,44 @@ fun EditNote(
             isDeleting = true
         }
 
-        Scaffold(
-            topBar = { EditNoteAppBar(onDelete = onDelete) },
-            floatingActionButton = {
-                EditNoteFab(onSave)
-            },
-            floatingActionButtonPosition = FabPosition.Center,
-        ) { paddingValues ->
-            Column(
-                Modifier
-                    .padding(paddingValues)
-                    .fillMaxWidth()
-                    .padding(smallPadding)
-            ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    singleLine = true,
-                    label = {
-                        Text("Title")
-                    },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = {
-                        Text("Content")
-                    },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+        BoxWithConstraints {
+            val fabPosition =
+                if (this.maxWidth < Value.Fab.minWidthRequiredFabToLeft) FabPosition.Center
+                else FabPosition.End
+
+            Scaffold(
+                topBar = { EditNoteAppBar(onDelete = onDelete) },
+                floatingActionButton = {
+                    EditNoteFab(onSave, this)
+                },
+                floatingActionButtonPosition = fabPosition,
+            ) { paddingValues ->
+                Column(
+                    Modifier
+                        .padding(paddingValues)
+                        .fillMaxWidth()
+                        .padding(Value.smallPadding)
+                ) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        singleLine = true,
+                        label = {
+                            Text("Title")
+                        },
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        label = {
+                            Text("Content")
+                        },
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
@@ -144,9 +150,20 @@ private fun EditNoteAppBar(
 @Composable
 private fun EditNoteFab(
     onSave: () -> Unit,
+    constraintsScope: BoxWithConstraintsScope,
     modifier: Modifier = Modifier,
 ) {
-    FloatingActionButton(onClick = onSave, modifier = modifier) {
-        Icon(Icons.Filled.Done, "")
+    val label = "Save note"
+    val icon: @Composable () -> Unit = { Icon(Icons.Filled.Done, label) }
+
+    if (constraintsScope.maxWidth < Value.Fab.minWidthRequiredExtendedFab) {
+        FloatingActionButton(onClick = onSave, modifier = modifier) {
+            icon.invoke()
+        }
+    } else {
+        ExtendedFloatingActionButton(onClick = onSave, modifier = modifier) {
+            icon.invoke()
+            Text(text = label)
+        }
     }
 }

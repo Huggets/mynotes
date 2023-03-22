@@ -1,5 +1,6 @@
 package com.huggets.mynotes.ui
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -37,12 +38,19 @@ fun ViewNoteList(
     }
     changeOnBackPressedCallback(onBackPressed)
 
-    Scaffold(
-        topBar = { ViewNoteListAppBar() },
-        floatingActionButton = { ViewNoteListFab(navigationController) },
-        floatingActionButtonPosition = FabPosition.Center,
-    ) { padding ->
-        NoteList(navigationController, appState, Modifier.padding(padding))
+    BoxWithConstraints {
+        Log.d("test", this.maxWidth.toString())
+        val fabPosition =
+            if (this.maxWidth < Value.Fab.minWidthRequiredFabToLeft) FabPosition.Center
+            else FabPosition.End
+
+        Scaffold(
+            topBar = { ViewNoteListAppBar() },
+            floatingActionButton = { ViewNoteListFab(navigationController, this) },
+            floatingActionButtonPosition = fabPosition,
+        ) { padding ->
+            NoteList(navigationController, appState, Modifier.padding(padding))
+        }
     }
 }
 
@@ -56,7 +64,7 @@ private fun NoteList(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(smallPadding)
+                .padding(Value.smallPadding)
         ) {
             Text(
                 text = "No notes",
@@ -100,13 +108,13 @@ private fun NoteElement(
         color = color,
         contentColor = contentColor,
         shape = ShapeDefaults.Small,
-        modifier = modifier.padding(smallPadding),
+        modifier = modifier.padding(Value.smallPadding),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = openNote)
-                .padding(smallPadding)
+                .padding(Value.smallPadding)
         ) {
             val title = note.title.let {
                 if (it.isBlank()) "No title"
@@ -137,14 +145,26 @@ private fun ViewNoteListAppBar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ViewNoteListFab(navigationController: NavHostController) {
+private fun ViewNoteListFab(
+    navigationController: NavHostController,
+    constraintsScope: BoxWithConstraintsScope,
+) {
     val openNewNote: () -> Unit = {
         navigationController.navigate(
             Destinations.generateEditNoteDestination(true)
         )
     }
+    val label = "Add a new note"
+    val icon: @Composable () -> Unit = { Icon(Icons.Filled.Add, label) }
 
-    FloatingActionButton(onClick = openNewNote) {
-        Icon(Icons.Filled.Add, "Add a new note")
+    if (constraintsScope.maxWidth < Value.Fab.minWidthRequiredExtendedFab) {
+        FloatingActionButton(onClick = openNewNote) {
+            icon.invoke()
+        }
+    } else {
+        ExtendedFloatingActionButton(onClick = openNewNote) {
+            icon.invoke()
+            Text(text = label)
+        }
     }
 }
