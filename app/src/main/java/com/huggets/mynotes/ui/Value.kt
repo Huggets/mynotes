@@ -7,5 +7,6 @@ object Value {
         val minWidthRequiredExtendedFab = 400.dp
         val minWidthRequiredFabToLeft = 800.dp
     }
-    val smallPadding = 8.dp
+
+    val smallPadding = 12.dp
 }

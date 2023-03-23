@@ -9,15 +9,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
@@ -125,7 +123,12 @@ private fun NoteElement(
         color = color,
         contentColor = contentColor,
         shape = ShapeDefaults.Small,
-        modifier = modifier.padding(Value.smallPadding),
+        modifier = modifier.padding(
+            Value.smallPadding,
+            0.dp,
+            Value.smallPadding,
+            Value.smallPadding,
+        ),
     ) {
         Column(
             modifier = Modifier

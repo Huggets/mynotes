@@ -30,10 +30,10 @@ import com.huggets.mynotes.theme.*
 fun EditNote(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    noteId: Int,
+    noteId: Long,
     isNewNote: Boolean,
     saveNote: (NoteItemUiState) -> Unit,
-    deleteNote: (noteId: Int) -> Unit,
+    deleteNote: (noteId: Long) -> Unit,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     var isDeleting by rememberSaveable { mutableStateOf(false) }

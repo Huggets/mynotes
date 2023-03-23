@@ -1,42 +1,44 @@
 package com.huggets.mynotes.note
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class NoteViewModel : ViewModel() {
+class NoteViewModel(context: Context) : ViewModel() {
 
-    private val noteRepository = NoteRepository()
+    private val repository = NoteRepository(context)
 
     private val _uiState = MutableStateFlow(NoteAppUiState())
-
     val uiState = _uiState.asStateFlow()
 
     fun fetchNotes() {
         _uiState.value = _uiState.value.copy(isFetchingItem = true)
 
         viewModelScope.launch {
-            val noteList = mutableListOf<NoteItemUiState>()
+            repository.fetchNotes().collect {
+                val list = mutableListOf<NoteItemUiState>()
 
-            for (note in noteRepository.notes) {
-                noteList.add(NoteItemUiState(note.id, note.title, note.content))
+                it.forEach { note ->
+                    list.add(NoteItemUiState(note.id, note.title, note.content))
+                }
+
+                _uiState.value = NoteAppUiState(isFetchingItem = false, items = list)
             }
-
-            _uiState.value = _uiState.value.copy(isFetchingItem = false, items = noteList)
         }
     }
 
     fun saveNote(note: NoteItemUiState) {
         viewModelScope.launch {
-            noteRepository.saveNote(note.toNote())
+            repository.saveNote(note.toNote())
         }
     }
 
-    fun deleteNote(noteId: Int) {
+    fun deleteNote(noteId: Long) {
         viewModelScope.launch {
-            noteRepository.deleteNote(noteId)
+            repository.deleteNote(noteId)
         }
     }
 }

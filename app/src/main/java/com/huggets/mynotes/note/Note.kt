@@ -1,15 +1,12 @@
 package com.huggets.mynotes.note
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "note")
 data class Note(
-    var id: Int,
+    @PrimaryKey(autoGenerate = true)
+    var id: Long,
     var title: String,
     var content: String
 )
-
-fun List<Note>.find(noteId: Int): Note? {
-    forEach {
-        if (it.id == noteId) return it
-    }
-
-    return null
-}

@@ -23,6 +23,6 @@ object Destinations {
      * By default, it edit a new note. If newNote is false then it edits
      * the note with the corresponding noteId.
      */
-    fun generateEditNoteDestination(isNewNote: Boolean = true, noteId: Int = 0) =
+    fun generateEditNoteDestination(isNewNote: Boolean = true, noteId: Long = 0) =
         "$editNote/$isNewNote/$noteId"
 }
