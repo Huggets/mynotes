@@ -9,8 +9,8 @@ data class NoteItemUiState(
 }
 
 fun List<NoteItemUiState>.find(noteId: Long): NoteItemUiState? {
-    forEach {
-        if (it.id == noteId) return it
+    for (note in this) {
+        if (note.id == noteId) return note
     }
 
     return null

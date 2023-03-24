@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -25,7 +24,7 @@ import com.huggets.mynotes.theme.*
  * Edit a new note if newNote is true. Otherwise edit an existing one,
  * contained in notes.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditNote(
     navigationController: NavHostController,
@@ -81,7 +80,7 @@ fun EditNote(
             onConfirmation = {
                 navigationController.navigateUp()
             },
-            confirmationMessage ="Cancel changes?",
+            confirmationMessage = "Cancel changes?",
         )
 
         val note = if (isNewNote) {

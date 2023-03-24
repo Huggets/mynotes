@@ -8,9 +8,6 @@ interface NoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(note: Note)
 
-    @Delete
-    suspend fun delete(note: Note): Int
-
     @Query("DELETE FROM note WHERE id = :noteId")
     suspend fun delete(noteId: Long): Int
 
