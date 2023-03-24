@@ -35,23 +35,12 @@ fun ViewNoteList(
     appState: State<NoteAppUiState>,
     deleteNotes: (List<Long>) -> Unit,
 ) {
+    val isDeleting = rememberSaveable { mutableStateOf(false) }
+    val deleteSelectedNote: () -> Unit = { isDeleting.value = true }
+
     val isSelectingMode = rememberSaveable { mutableStateOf(false) }
     val isNoteSelected = remember { mutableStateMapOf<Long, Boolean>() }
     val selectedCount = rememberSaveable { mutableStateOf(0) }
-    val deleteSelectedNote: () -> Unit = {
-        val toDelete = mutableListOf<Long>()
-
-        for ((noteId, isSelected) in isNoteSelected.entries) {
-            if (isSelected) {
-                toDelete.add(noteId)
-                isNoteSelected[noteId] = false // Unselect the note
-            }
-        }
-
-        selectedCount.value = 0
-        isSelectingMode.value = false
-        deleteNotes(toDelete)
-    }
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
@@ -109,6 +98,39 @@ fun ViewNoteList(
                 selectedCount,
                 Modifier.padding(padding)
             )
+
+            // TODO put the code in a function to be able to reuse it, especially in EditNote
+            if (isDeleting.value) {
+                val onDismiss: () -> Unit = { isDeleting.value = false }
+                val onConfirm: () -> Unit = {
+                    val toDelete = mutableListOf<Long>()
+
+                    for ((noteId, isSelected) in isNoteSelected.entries) {
+                        if (isSelected) {
+                            toDelete.add(noteId)
+                            isNoteSelected[noteId] = false // Unselect the note
+                        }
+                    }
+
+                    selectedCount.value = 0
+                    isSelectingMode.value = false
+                    deleteNotes(toDelete)
+                    isDeleting.value = false
+                }
+
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    confirmButton = {
+                        Button(onClick = onConfirm) { Text("Yes") }
+                    },
+                    dismissButton = {
+                        Button(onClick = onDismiss) { Text("Cancel") }
+                    },
+                    text = {
+                        Text("Are you sure you want to delete the selected note(s)?")
+                    }
+                )
+            }
         }
     }
 }
