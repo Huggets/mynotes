@@ -2,14 +2,18 @@ package com.huggets.mynotes.ui
 
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,13 +33,42 @@ fun ViewNoteList(
     quitApplication: () -> Unit,
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
+    deleteNotes: (List<Long>) -> Unit,
 ) {
+    val isSelectingMode = rememberSaveable { mutableStateOf(false) }
+    val isNoteSelected = remember { mutableStateMapOf<Long, Boolean>() }
+    val selectedCount = rememberSaveable { mutableStateOf(0) }
+    val deleteSelectedNote: () -> Unit = {
+        val toDelete = mutableListOf<Long>()
+
+        for ((noteId, isSelected) in isNoteSelected.entries) {
+            if (isSelected) {
+                toDelete.add(noteId)
+                isNoteSelected[noteId] = false // Unselect the note
+            }
+        }
+
+        selectedCount.value = 0
+        isSelectingMode.value = false
+        deleteNotes(toDelete)
+    }
+
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val navigationFailed = !navigationController.navigateUp()
-                if (navigationFailed) {
-                    quitApplication()
+                if (isSelectingMode.value) {
+                    // Unselect all notes
+                    isSelectingMode.value = false
+                    selectedCount.value = 0
+
+                    for (noteId in isNoteSelected.keys) {
+                        isNoteSelected[noteId] = false
+                    }
+                } else {
+                    val navigationFailed = !navigationController.navigateUp()
+                    if (navigationFailed) {
+                        quitApplication()
+                    }
                 }
             }
         }
@@ -60,21 +93,62 @@ fun ViewNoteList(
             else FabPosition.End
 
         Scaffold(
-            topBar = { ViewNoteListAppBar() },
-            floatingActionButton = { ViewNoteListFab(navigationController, this) },
+            topBar = { ViewNoteListAppBar(isSelectingMode.value, deleteSelectedNote) },
+            floatingActionButton = {
+                if (!isSelectingMode.value) {
+                    ViewNoteListFab(navigationController, this)
+                }
+            },
             floatingActionButtonPosition = fabPosition,
         ) { padding ->
-            NoteList(navigationController, appState, Modifier.padding(padding))
+            NoteList(
+                navigationController,
+                appState,
+                isSelectingMode,
+                isNoteSelected,
+                selectedCount,
+                Modifier.padding(padding)
+            )
         }
     }
 }
+
 
 @Composable
 private fun NoteList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    modifier: Modifier = Modifier
+    isSelectingMode: MutableState<Boolean>,
+    isNoteSelected: SnapshotStateMap<Long, Boolean>,
+    selectedCount: MutableState<Int>,
+    modifier: Modifier = Modifier,
 ) {
+    val onClick: (Long) -> Unit = { id ->
+        if (isSelectingMode.value) {
+            if (isNoteSelected[id] != true) {
+                isNoteSelected[id] = true
+                selectedCount.value++
+            } else {
+                isNoteSelected[id] = false
+                selectedCount.value--
+                if (selectedCount.value == 0) {
+                    isSelectingMode.value = false
+                }
+            }
+        } else {
+            navigationController.navigate(Destinations.generateEditNoteDestination(false, id))
+        }
+    }
+    val onLongClick: (Long) -> Unit = { id ->
+        isSelectingMode.value = true
+        // If not already selected
+
+        if (isNoteSelected[id] != true) {
+            isNoteSelected[id] = true
+            selectedCount.value++
+        }
+    }
+
     if (appState.value.items.isEmpty()) {
         Box(
             modifier = modifier
@@ -92,23 +166,22 @@ private fun NoteList(
         LazyColumn(modifier = modifier.fillMaxWidth()) {
             for (note in appState.value.items) {
                 item(key = note.id) {
-                    NoteElement(navigationController, note)
+                    NoteElement(note, isNoteSelected[note.id], onClick, onLongClick)
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteElement(
-    navigationController: NavHostController,
     note: NoteItemUiState,
-    modifier: Modifier = Modifier
+    isSelected: Boolean?,
+    onClick: (Long) -> Unit,
+    onLongClick: (Long) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val openNote: () -> Unit = {
-        navigationController.navigate(Destinations.generateEditNoteDestination(false, note.id))
-    }
-
     val color: Color
     val contentColor: Color
     if (isSystemInDarkTheme()) {
@@ -118,23 +191,28 @@ private fun NoteElement(
         color = md_theme_light_surfaceVariant
         contentColor = md_theme_light_onSurfaceVariant
     }
+    val offsetPadding = if (isSelected == true) 32.dp else 0.dp
 
     Surface(
         color = color,
         contentColor = contentColor,
         shape = ShapeDefaults.Small,
-        modifier = modifier.padding(
-            Value.smallPadding,
-            0.dp,
-            Value.smallPadding,
-            Value.smallPadding,
-        ),
+        modifier = modifier
+            .padding(
+                Value.smallPadding,
+                0.dp,
+                Value.smallPadding,
+                Value.smallPadding,
+            )
+            .offset(x = offsetPadding),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = openNote)
-                .padding(Value.smallPadding)
+                .combinedClickable(
+                    onClick = { onClick(note.id) },
+                    onLongClick = { onLongClick(note.id) })
+                .padding(Value.smallPadding),
         ) {
             val title = note.title.let {
                 if (it.isBlank()) "No title"
@@ -149,7 +227,7 @@ private fun NoteElement(
             )
             Text(
                 text = content,
-                fontSize = 16.sp
+                fontSize = 16.sp,
             )
         }
     }
@@ -157,9 +235,20 @@ private fun NoteElement(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ViewNoteListAppBar(modifier: Modifier = Modifier) {
+private fun ViewNoteListAppBar(
+    isSelectingMode: Boolean,
+    deleteSelectedNote: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     TopAppBar(
         title = { Text("View notes") },
+        actions = {
+            if (isSelectingMode) {
+                IconButton(onClick = deleteSelectedNote) {
+                    Icon(Icons.Filled.Delete, "Delete selected notes")
+                }
+            }
+        },
         modifier = modifier,
     )
 }

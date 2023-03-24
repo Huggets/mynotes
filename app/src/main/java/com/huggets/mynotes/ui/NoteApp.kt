@@ -27,10 +27,17 @@ fun NoteApp(
                 startDestination = Destinations.generateViewNoteList(),
             ) {
                 composable(Destinations.viewNoteListRoute) {
+                    val deleteNotes: (List<Long>) -> Unit = { noteIds ->
+                        for (id in noteIds) {
+                            noteViewModel.deleteNote(id)
+                        }
+                        noteViewModel.fetchNotes()
+                    }
                     ViewNoteList(
                         quitApplication,
                         navigationController,
                         appState,
+                        deleteNotes,
                     )
                 }
                 composable(Destinations.editNoteRoute) { backStackEntry ->
