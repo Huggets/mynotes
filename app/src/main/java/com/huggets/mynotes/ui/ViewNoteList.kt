@@ -12,10 +12,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -35,11 +37,39 @@ fun ViewNoteList(
     appState: State<NoteAppUiState>,
     deleteNotes: (List<Long>) -> Unit,
 ) {
+    val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(
+        save = {
+            val builder = StringBuilder()
+            for ((id, value) in it) {
+                builder.append(id)
+                builder.append(':')
+                builder.append(value)
+                builder.append(';')
+            }
+            if (builder.lastIndex != -1) {
+                builder.delete(builder.lastIndex, builder.lastIndex + 1)
+            }
+            builder.toString()
+        },
+        restore = {
+            val map = SnapshotStateMap<Long, Boolean>()
+            val items = it.split(';')
+            if (items[0] != "") {
+                for (item in items) {
+                    val (id, value) = item.split(':')
+                    map[id.toLong()] = value.toBoolean()
+                }
+            }
+
+            map
+        }
+    )
+
     val isDeleting = rememberSaveable { mutableStateOf(false) }
     val deleteSelectedNote: () -> Unit = { isDeleting.value = true }
 
     val isSelectingMode = rememberSaveable { mutableStateOf(false) }
-    val isNoteSelected = remember { mutableStateMapOf<Long, Boolean>() }
+    val isNoteSelected = rememberSaveable(saver = saver) { mutableStateMapOf() }
     val selectedCount = rememberSaveable { mutableStateOf(0) }
 
     val onBackPressed = remember {
@@ -206,14 +236,16 @@ private fun NoteElement(
 ) {
     val color: Color
     val contentColor: Color
+    val selectionColor: Color
     if (isSystemInDarkTheme()) {
         color = md_theme_dark_surfaceVariant
         contentColor = md_theme_dark_onSurfaceVariant
+        selectionColor = md_theme_dark_inverseSurface
     } else {
         color = md_theme_light_surfaceVariant
         contentColor = md_theme_light_onSurfaceVariant
+        selectionColor = md_theme_light_inverseSurface
     }
-    val offsetPadding = if (isSelected == true) 32.dp else 0.dp
 
     Surface(
         color = color,
@@ -225,32 +257,44 @@ private fun NoteElement(
                 0.dp,
                 Value.smallPadding,
                 Value.smallPadding,
-            )
-            .offset(x = offsetPadding),
+            ),
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { onClick(note.id) },
-                    onLongClick = { onLongClick(note.id) })
-                .padding(Value.smallPadding),
+                    onLongClick = { onLongClick(note.id) }
+                ),
         ) {
-            val title = note.title.let {
-                if (it.isBlank()) "No title"
-                else shortened(it, 20)
-            }
-            val content = shortened(note.content, 120)
+            Column(
+                modifier = Modifier.padding(Value.smallPadding)
+            ) {
+                val title = note.title.let {
+                    if (it.isBlank()) "No title"
+                    else shortened(it, 20)
+                }
+                val content = shortened(note.content, 120)
 
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = content,
-                fontSize = 16.sp,
-            )
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = content,
+                    fontSize = 16.sp,
+                )
+            }
+            Surface(
+                color = selectionColor,
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(
+                        if (isSelected == true) 0.5f
+                        else 0f
+                    ),
+            ) {}
         }
     }
 }
