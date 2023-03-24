@@ -65,8 +65,8 @@ fun ViewNoteList(
         }
     )
 
-    val isDeleting = rememberSaveable { mutableStateOf(false) }
-    val deleteSelectedNote: () -> Unit = { isDeleting.value = true }
+    val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
+    val deleteSelectedNote: () -> Unit = { showDeleteConfirmation.value = true }
 
     val isSelectingMode = rememberSaveable { mutableStateOf(false) }
     val isNoteSelected = rememberSaveable(saver = saver) { mutableStateMapOf() }
@@ -129,10 +129,12 @@ fun ViewNoteList(
                 Modifier.padding(padding)
             )
 
-            // TODO put the code in a function to be able to reuse it, especially in EditNote
-            if (isDeleting.value) {
-                val onDismiss: () -> Unit = { isDeleting.value = false }
-                val onConfirm: () -> Unit = {
+            ConfirmationDialog(
+                displayDialog = showDeleteConfirmation,
+                onConfirmation = {
+                    selectedCount.value = 0
+                    isSelectingMode.value = false
+
                     val toDelete = mutableListOf<Long>()
 
                     for ((noteId, isSelected) in isNoteSelected.entries) {
@@ -142,25 +144,10 @@ fun ViewNoteList(
                         }
                     }
 
-                    selectedCount.value = 0
-                    isSelectingMode.value = false
                     deleteNotes(toDelete)
-                    isDeleting.value = false
-                }
-
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    confirmButton = {
-                        Button(onClick = onConfirm) { Text("Yes") }
-                    },
-                    dismissButton = {
-                        Button(onClick = onDismiss) { Text("Cancel") }
-                    },
-                    text = {
-                        Text("Are you sure you want to delete the selected note(s)?")
-                    }
-                )
-            }
+                },
+                confirmationMessage = "Are you sure you want to delete the selected note(s)?"
+            )
         }
     }
 }
@@ -193,9 +180,9 @@ private fun NoteList(
     }
     val onLongClick: (Long) -> Unit = { id ->
         isSelectingMode.value = true
-        // If not already selected
 
         if (isNoteSelected[id] != true) {
+            // If not already selected
             isNoteSelected[id] = true
             selectedCount.value++
         }

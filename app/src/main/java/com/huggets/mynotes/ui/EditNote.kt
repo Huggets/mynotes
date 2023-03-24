@@ -36,13 +36,13 @@ fun EditNote(
     deleteNote: (noteId: Long) -> Unit,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
-    var isDeleting by rememberSaveable { mutableStateOf(false) }
-    var showCancelConfirmation by rememberSaveable { mutableStateOf(false) }
+    val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
+    val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                showCancelConfirmation = true
+                showCancelConfirmation.value = true
             }
         }
     }
@@ -65,51 +65,24 @@ fun EditNote(
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
     } else {
-        if (isDeleting) {
-            val onDismiss: () -> Unit = { isDeleting = false }
-            val onConfirm: () -> Unit = {
+        ConfirmationDialog(
+            displayDialog = showDeleteConfirmation,
+            onConfirmation = {
                 if (!isNewNote) {
                     deleteNote(noteId)
                     isDeleted = true
                 }
-                isDeleting = false
                 navigationController.navigateUp()
-            }
-
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                confirmButton = {
-                    Button(onClick = onConfirm) { Text("Yes") }
-                },
-                dismissButton = {
-                    Button(onClick = onDismiss) { Text("Cancel") }
-                },
-                text = {
-                    Text("Are you sure you want to delete this note?")
-                }
-            )
-        }
-
-        if (showCancelConfirmation) {
-            val onDismiss: () -> Unit = { showCancelConfirmation = false }
-            val onConfirm: () -> Unit = {
-                showCancelConfirmation = false
+            },
+            confirmationMessage = "Are you sure you want to delete this note?"
+        )
+        ConfirmationDialog(
+            displayDialog = showCancelConfirmation,
+            onConfirmation = {
                 navigationController.navigateUp()
-            }
-
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                confirmButton = {
-                    Button(onClick = onConfirm) { Text("Yes") }
-                },
-                dismissButton = {
-                    Button(onClick = onDismiss) { Text("No") }
-                },
-                text = {
-                    Text("Cancel changes?")
-                }
-            )
-        }
+            },
+            confirmationMessage ="Cancel changes?",
+        )
 
         val note = if (isNewNote) {
             NoteItemUiState(0, "", "")
@@ -125,7 +98,7 @@ fun EditNote(
             navigationController.navigateUp()
         }
         val onDelete: () -> Unit = {
-            isDeleting = true
+            showDeleteConfirmation.value = true
         }
 
         Scaffold(
