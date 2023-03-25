@@ -4,11 +4,10 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -77,9 +76,9 @@ fun ViewNoteList(
     val isNoteSelected = rememberSaveable(saver = saver) { mutableStateMapOf() }
     val selectedCount = rememberSaveable { mutableStateOf(0) }
 
-    val fabAnimationState = remember { MutableTransitionState(!selectionMode.value) }
+    val fabTransitionState = remember { MutableTransitionState(!selectionMode.value) }
     val deleteIconTransitionState = remember { MutableTransitionState(selectionMode.value) }
-    fabAnimationState.targetState = !selectionMode.value
+    fabTransitionState.targetState = !selectionMode.value
     deleteIconTransitionState.targetState = selectionMode.value
 
     val onBackPressed = remember {
@@ -124,7 +123,7 @@ fun ViewNoteList(
         Scaffold(
             topBar = { ViewNoteListAppBar(deleteSelectedNote, deleteIconTransitionState) },
             floatingActionButton = {
-                ViewNoteListFab(navigationController, this, fabAnimationState)
+                ViewNoteListFab(navigationController, this, fabTransitionState)
             },
             floatingActionButtonPosition = fabPosition,
         ) { padding ->
@@ -134,6 +133,7 @@ fun ViewNoteList(
                 selectionMode,
                 isNoteSelected,
                 selectedCount,
+                fabTransitionState,
                 Modifier.padding(padding)
             )
 
@@ -169,6 +169,7 @@ private fun NoteList(
     selectionMode: MutableState<Boolean>,
     isNoteSelected: SnapshotStateMap<Long, Boolean>,
     selectedCount: MutableState<Int>,
+    fabTransitionState: MutableTransitionState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
     val onClick: (Long) -> Unit = { id ->
@@ -211,7 +212,27 @@ private fun NoteList(
         }
 
     } else {
-        LazyColumn(modifier = modifier.fillMaxWidth()) {
+        val listState = rememberLazyListState()
+        val lastListElementIndex =
+            rememberSaveable { mutableStateOf(listState.firstVisibleItemIndex) }
+
+        if (!selectionMode.value && listState.isScrollInProgress) {
+            val currentIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+
+            if (lastListElementIndex.value > currentIndex) {
+                lastListElementIndex.value = currentIndex
+                fabTransitionState.targetState = true
+            } else if (lastListElementIndex.value < currentIndex) {
+                lastListElementIndex.value = currentIndex
+                fabTransitionState.targetState = false
+            }
+        }
+
+        LazyColumn(
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(Value.smallPadding),
+            modifier = modifier.fillMaxWidth(),
+        ) {
             for (note in appState.value.items) {
                 item(key = note.id) {
                     NoteElement(
@@ -219,7 +240,6 @@ private fun NoteList(
                         isNoteSelected[note.id],
                         onClick,
                         onLongClick,
-                        modifier = Modifier.animateItemPlacement()
                     )
                 }
             }
@@ -256,9 +276,7 @@ private fun NoteElement(
         modifier = modifier
             .padding(
                 Value.smallPadding,
-                0.dp,
-                Value.smallPadding,
-                Value.smallPadding,
+                0.dp
             ),
     ) {
         var boxWidth by remember { mutableStateOf(0.dp) }
