@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -246,22 +248,28 @@ private fun NoteElement(
                 Value.smallPadding,
             ),
     ) {
+        var boxWidth by remember { mutableStateOf(0.dp) }
+        val density = LocalDensity.current
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { onClick(note.id) },
                     onLongClick = { onLongClick(note.id) }
-                ),
+                )
+                .onGloballyPositioned {
+                    boxWidth = with(density) { it.size.width.toDp() }
+                },
         ) {
             Column(
                 modifier = Modifier.padding(Value.smallPadding)
             ) {
                 val title = note.title.let {
                     if (it.isBlank()) "No title"
-                    else shortened(it, 20)
+                    else shortened(it, 1f, density, boxWidth, 16.sp)
                 }
-                val content = shortened(note.content, 120)
+                val content = shortened(note.content, 5f, density, boxWidth, 16.sp)
 
                 Text(
                     text = title,
