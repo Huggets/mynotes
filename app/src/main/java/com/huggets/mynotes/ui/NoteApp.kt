@@ -40,24 +40,36 @@ fun NoteApp(
                 composable(
                     Destinations.viewNoteListRoute,
                     enterTransition = {
-                        val transition =
-                            if (this.initialState.destination.route == Destinations.editNoteRoute) {
-                                fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { -(it * slideOffset).toInt() }
-                            } else {
-                                null
-                            }
+                        if (this.initialState.destination.route == Destinations.editNoteRoute) {
+                            val newNote =
+                                this.initialState.arguments?.getString(Destinations.ParametersName.noteId)
+                                    ?.toLong() == 0L
 
-                        transition
+                            if (newNote) {
+                                null
+                            } else {
+                                fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { -(it * slideOffset).toInt() }
+                            }
+                        } else {
+                            null
+                        }
+
+
                     },
                     exitTransition = {
-                        val transition =
-                            if (this.targetState.destination.route == Destinations.editNoteRoute) {
-                                fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { -(it * slideOffset).toInt() }
-                            } else {
-                                null
-                            }
+                        if (this.targetState.destination.route == Destinations.editNoteRoute) {
+                            val newNote =
+                                this.targetState.arguments?.getString(Destinations.ParametersName.noteId)
+                                    ?.toLong() == 0L
 
-                        transition
+                            if (newNote) {
+                                null
+                            } else {
+                                fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { -(it * slideOffset).toInt() }
+                            }
+                        } else {
+                            null
+                        }
                     }
                 ) {
                     val deleteNotes: (List<Long>) -> Unit = { noteIds ->
@@ -76,10 +88,26 @@ fun NoteApp(
                 composable(
                     Destinations.editNoteRoute,
                     enterTransition = {
-                        fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { (it * slideOffset).toInt() }
+                        val newNote =
+                            this.targetState.arguments?.getString(Destinations.ParametersName.noteId)
+                                ?.toLong() == 0L
+
+                        if (newNote) {
+                            slideInVertically(enterScreen) { it } + scaleIn(fadeInSpec)
+                        } else {
+                            fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { (it * slideOffset).toInt() }
+                        }
                     },
                     exitTransition = {
-                        fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { (it * slideOffset).toInt() }
+                        val newNote =
+                            this.initialState.arguments?.getString(Destinations.ParametersName.noteId)
+                                ?.toLong() == 0L
+
+                        if (newNote) {
+                            slideOutVertically(exitScreenPermanently) { it } + scaleOut(fadeOutSpec)
+                        } else {
+                            fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { (it * slideOffset).toInt() }
+                        }
                     },
                 ) { backStackEntry ->
                     val noteId =
