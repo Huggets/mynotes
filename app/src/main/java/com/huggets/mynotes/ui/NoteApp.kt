@@ -82,9 +82,6 @@ fun NoteApp(
                         fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { (it * slideOffset).toInt() }
                     },
                 ) { backStackEntry ->
-                    val isNewNote =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.isNewNote)!!
-                            .toBoolean()
                     val noteId =
                         backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
                             .toLong()
@@ -101,7 +98,6 @@ fun NoteApp(
                         navigationController,
                         appState,
                         noteId,
-                        isNewNote,
                         saveNote,
                         deleteNote,
                     )

@@ -30,13 +30,14 @@ fun EditNote(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     noteId: Long,
-    isNewNote: Boolean,
     saveNote: (NoteItemUiState) -> Unit,
     deleteNote: (noteId: Long) -> Unit,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
+
+    val isNewNote = noteId == 0L
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {

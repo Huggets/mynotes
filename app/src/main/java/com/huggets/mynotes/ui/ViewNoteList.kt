@@ -34,6 +34,33 @@ import com.huggets.mynotes.note.NoteItemUiState
 import com.huggets.mynotes.theme.*
 
 private val exitScreen = Value.Animation.exitScreen<Float>()
+private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(
+    save = {
+        val builder = StringBuilder()
+        for ((id, value) in it) {
+            builder.append(id)
+            builder.append(':')
+            builder.append(value)
+            builder.append(';')
+        }
+        if (builder.lastIndex != -1) {
+            builder.delete(builder.lastIndex, builder.lastIndex + 1)
+        }
+        builder.toString()
+    },
+    restore = {
+        val map = SnapshotStateMap<Long, Boolean>()
+        val items = it.split(';')
+        if (items[0] != "") {
+            for (item in items) {
+                val (id, value) = item.split(':')
+                map[id.toLong()] = value.toBoolean()
+            }
+        }
+
+        map
+    }
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,34 +70,6 @@ fun ViewNoteList(
     appState: State<NoteAppUiState>,
     deleteNotes: (List<Long>) -> Unit,
 ) {
-    val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(
-        save = {
-            val builder = StringBuilder()
-            for ((id, value) in it) {
-                builder.append(id)
-                builder.append(':')
-                builder.append(value)
-                builder.append(';')
-            }
-            if (builder.lastIndex != -1) {
-                builder.delete(builder.lastIndex, builder.lastIndex + 1)
-            }
-            builder.toString()
-        },
-        restore = {
-            val map = SnapshotStateMap<Long, Boolean>()
-            val items = it.split(';')
-            if (items[0] != "") {
-                for (item in items) {
-                    val (id, value) = item.split(':')
-                    map[id.toLong()] = value.toBoolean()
-                }
-            }
-
-            map
-        }
-    )
-
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val deleteSelectedNote: () -> Unit = { showDeleteConfirmation.value = true }
 
@@ -185,7 +184,7 @@ private fun NoteList(
                 }
             }
         } else {
-            navigationController.navigate(Destinations.generateEditNoteDestination(false, id))
+            navigationController.navigate(Destinations.generateEditNoteDestination(id))
         }
     }
     val onLongClick: (Long) -> Unit = { id ->
@@ -303,7 +302,8 @@ private fun NoteElement(
                         if (isSelected == true) 0.5f
                         else 0f
                     ),
-            ) {}
+                content = {}
+            )
         }
     }
 }
@@ -341,7 +341,7 @@ private fun ViewNoteListFab(
 ) {
     val openNewNote: () -> Unit = {
         navigationController.navigate(
-            Destinations.generateEditNoteDestination(true)
+            Destinations.generateEditNoteDestination(0)
         )
     }
     val label = "Add a new note"
