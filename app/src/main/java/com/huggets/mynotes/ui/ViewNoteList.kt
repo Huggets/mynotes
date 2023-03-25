@@ -2,6 +2,8 @@ package com.huggets.mynotes.ui
 
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.animation.*
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -30,6 +32,8 @@ import com.huggets.mynotes.*
 import com.huggets.mynotes.note.NoteAppUiState
 import com.huggets.mynotes.note.NoteItemUiState
 import com.huggets.mynotes.theme.*
+
+private val exitScreen = Value.Animation.exitScreen<Float>()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,16 +74,21 @@ fun ViewNoteList(
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val deleteSelectedNote: () -> Unit = { showDeleteConfirmation.value = true }
 
-    val isSelectingMode = rememberSaveable { mutableStateOf(false) }
+    val selectionMode = rememberSaveable { mutableStateOf(false) }
     val isNoteSelected = rememberSaveable(saver = saver) { mutableStateMapOf() }
     val selectedCount = rememberSaveable { mutableStateOf(0) }
+
+    val fabAnimationState = remember { MutableTransitionState(!selectionMode.value) }
+    val deleteIconTransitionState = remember { MutableTransitionState(selectionMode.value) }
+    fabAnimationState.targetState = !selectionMode.value
+    deleteIconTransitionState.targetState = selectionMode.value
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (isSelectingMode.value) {
+                if (selectionMode.value) {
                     // Unselect all notes
-                    isSelectingMode.value = false
+                    selectionMode.value = false
                     selectedCount.value = 0
 
                     for (noteId in isNoteSelected.keys) {
@@ -114,18 +123,16 @@ fun ViewNoteList(
             else FabPosition.End
 
         Scaffold(
-            topBar = { ViewNoteListAppBar(isSelectingMode.value, deleteSelectedNote) },
+            topBar = { ViewNoteListAppBar(deleteSelectedNote, deleteIconTransitionState) },
             floatingActionButton = {
-                if (!isSelectingMode.value) {
-                    ViewNoteListFab(navigationController, this)
-                }
+                ViewNoteListFab(navigationController, this, fabAnimationState)
             },
             floatingActionButtonPosition = fabPosition,
         ) { padding ->
             NoteList(
                 navigationController,
                 appState,
-                isSelectingMode,
+                selectionMode,
                 isNoteSelected,
                 selectedCount,
                 Modifier.padding(padding)
@@ -135,7 +142,7 @@ fun ViewNoteList(
                 displayDialog = showDeleteConfirmation,
                 onConfirmation = {
                     selectedCount.value = 0
-                    isSelectingMode.value = false
+                    selectionMode.value = false
 
                     val toDelete = mutableListOf<Long>()
 
@@ -155,17 +162,18 @@ fun ViewNoteList(
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    isSelectingMode: MutableState<Boolean>,
+    selectionMode: MutableState<Boolean>,
     isNoteSelected: SnapshotStateMap<Long, Boolean>,
     selectedCount: MutableState<Int>,
     modifier: Modifier = Modifier,
 ) {
     val onClick: (Long) -> Unit = { id ->
-        if (isSelectingMode.value) {
+        if (selectionMode.value) {
             if (isNoteSelected[id] != true) {
                 isNoteSelected[id] = true
                 selectedCount.value++
@@ -173,7 +181,7 @@ private fun NoteList(
                 isNoteSelected[id] = false
                 selectedCount.value--
                 if (selectedCount.value == 0) {
-                    isSelectingMode.value = false
+                    selectionMode.value = false
                 }
             }
         } else {
@@ -181,7 +189,7 @@ private fun NoteList(
         }
     }
     val onLongClick: (Long) -> Unit = { id ->
-        isSelectingMode.value = true
+        selectionMode.value = true
 
         if (isNoteSelected[id] != true) {
             // If not already selected
@@ -207,7 +215,13 @@ private fun NoteList(
         LazyColumn(modifier = modifier.fillMaxWidth()) {
             for (note in appState.value.items) {
                 item(key = note.id) {
-                    NoteElement(note, isNoteSelected[note.id], onClick, onLongClick)
+                    NoteElement(
+                        note,
+                        isNoteSelected[note.id],
+                        onClick,
+                        onLongClick,
+                        modifier = Modifier.animateItemPlacement()
+                    )
                 }
             }
         }
@@ -297,14 +311,18 @@ private fun NoteElement(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ViewNoteListAppBar(
-    isSelectingMode: Boolean,
     deleteSelectedNote: () -> Unit,
+    deleteIconState: MutableTransitionState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
         title = { Text("View notes") },
         actions = {
-            if (isSelectingMode) {
+            AnimatedVisibility(
+                visibleState = deleteIconState,
+                enter = fadeIn(exitScreen),
+                exit = fadeOut(exitScreen),
+            ) {
                 IconButton(onClick = deleteSelectedNote) {
                     Icon(Icons.Filled.Delete, "Delete selected notes")
                 }
@@ -314,10 +332,12 @@ private fun ViewNoteListAppBar(
     )
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun ViewNoteListFab(
     navigationController: NavHostController,
     constraintsScope: BoxWithConstraintsScope,
+    transitionState: MutableTransitionState<Boolean>,
 ) {
     val openNewNote: () -> Unit = {
         navigationController.navigate(
@@ -327,14 +347,20 @@ private fun ViewNoteListFab(
     val label = "Add a new note"
     val icon: @Composable () -> Unit = { Icon(Icons.Filled.Add, label) }
 
-    if (constraintsScope.maxWidth < Value.Limit.minWidthRequiredExtendedFab) {
-        FloatingActionButton(onClick = openNewNote) {
-            icon.invoke()
-        }
-    } else {
-        ExtendedFloatingActionButton(onClick = openNewNote) {
-            icon.invoke()
-            Text(text = label)
+    AnimatedVisibility(
+        visibleState = transitionState,
+        enter = scaleIn(exitScreen),
+        exit = scaleOut(exitScreen),
+    ) {
+        if (constraintsScope.maxWidth < Value.Limit.minWidthRequiredExtendedFab) {
+            FloatingActionButton(onClick = openNewNote) {
+                icon.invoke()
+            }
+        } else {
+            ExtendedFloatingActionButton(onClick = openNewNote) {
+                icon.invoke()
+                Text(text = label)
+            }
         }
     }
 }
