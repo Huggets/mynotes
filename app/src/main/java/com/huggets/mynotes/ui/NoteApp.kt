@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.navigation.animation.AnimatedNavHost
@@ -113,13 +114,15 @@ fun NoteApp(
                                 ?.toLong() == 0L
 
                         if (newNote) {
-                            slideIn(enterScreen) {
-                                if (fabPosition.value == FabPosition.Center) {
-                                    IntOffset(it.width / 2, it.height)
-                                } else {
-                                    IntOffset(it.width, it.height)
-                                }
-                            } + scaleIn(fadeInSpec)
+                            if (fabPosition.value == FabPosition.Center) {
+                                scaleIn(
+                                    transformOrigin = TransformOrigin(0.5f, 1f)
+                                ) + slideIn { IntOffset(0, it.height) }
+                            } else {
+                                scaleIn(
+                                    transformOrigin = TransformOrigin(1f, 1f)
+                                ) + slideIn { IntOffset(it.width, it.height) }
+                            }
                         } else {
                             fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { (it * slideOffset).toInt() }
                         }
@@ -130,13 +133,15 @@ fun NoteApp(
                                 ?.toLong() == 0L
 
                         if (newNote) {
-                            slideOut(exitScreenPermanently) {
-                                if (fabPosition.value == FabPosition.Center) {
-                                    IntOffset(it.width / 2, it.height)
-                                } else {
-                                    IntOffset(it.width, it.height)
-                                }
-                            } + scaleOut(fadeOutSpec)
+                            if (fabPosition.value == FabPosition.Center) {
+                                scaleOut(
+                                    transformOrigin = TransformOrigin(0.5f, 1f)
+                                ) + slideOut { IntOffset(0, it.height) }
+                            } else {
+                                scaleOut(
+                                    transformOrigin = TransformOrigin(1f, 1f)
+                                ) + slideOut { IntOffset(it.width, it.height) }
+                            }
                         } else {
                             fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { (it * slideOffset).toInt() }
                         }
