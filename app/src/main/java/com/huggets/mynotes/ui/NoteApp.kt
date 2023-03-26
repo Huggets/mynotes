@@ -2,8 +2,14 @@ package com.huggets.mynotes.ui
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.SaverScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.navigation.animation.AnimatedNavHost
@@ -14,7 +20,20 @@ import com.huggets.mynotes.note.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
 import com.huggets.mynotes.ui.Value.Animation
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
+private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
+
+    override fun restore(value: Boolean): FabPosition {
+        return if (value) FabPosition.Center else FabPosition.End
+    }
+
+    override fun SaverScope.save(value: FabPosition): Boolean {
+        return value == FabPosition.Center
+    }
+
+}
+
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun NoteApp(
     quitApplication: () -> Unit,
@@ -22,6 +41,8 @@ fun NoteApp(
 ) {
     val navigationController = rememberAnimatedNavController()
     val appState = noteViewModel.uiState.collectAsStateWithLifecycle()
+    val fabPosition =
+        rememberSaveable(stateSaver = fabPositionSaver) { mutableStateOf(FabPosition.Center) }
 
     val slideOffset = 0.2f
     val enterScreen = Animation.enterScreen<IntOffset>()
@@ -82,6 +103,7 @@ fun NoteApp(
                         quitApplication,
                         navigationController,
                         appState,
+                        fabPosition,
                         deleteNotes,
                     )
                 }
@@ -93,7 +115,13 @@ fun NoteApp(
                                 ?.toLong() == 0L
 
                         if (newNote) {
-                            slideInVertically(enterScreen) { it } + scaleIn(fadeInSpec)
+                            slideIn(enterScreen) {
+                                if (fabPosition.value == FabPosition.Center) {
+                                    IntOffset(it.width / 2, it.height)
+                                } else {
+                                    IntOffset(it.width, it.height)
+                                }
+                            } + scaleIn(fadeInSpec)
                         } else {
                             fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { (it * slideOffset).toInt() }
                         }
@@ -104,7 +132,13 @@ fun NoteApp(
                                 ?.toLong() == 0L
 
                         if (newNote) {
-                            slideOutVertically(exitScreenPermanently) { it } + scaleOut(fadeOutSpec)
+                            slideOut(exitScreenPermanently) {
+                                if (fabPosition.value == FabPosition.Center) {
+                                    IntOffset(it.width / 2, it.height)
+                                } else {
+                                    IntOffset(it.width, it.height)
+                                }
+                            } + scaleOut(fadeOutSpec)
                         } else {
                             fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { (it * slideOffset).toInt() }
                         }

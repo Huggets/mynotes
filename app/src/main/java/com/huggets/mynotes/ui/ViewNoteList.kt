@@ -67,6 +67,7 @@ fun ViewNoteList(
     quitApplication: () -> Unit,
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
+    fabPosition: MutableState<FabPosition>,
     deleteNotes: (List<Long>) -> Unit,
 ) {
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
@@ -116,7 +117,7 @@ fun ViewNoteList(
     }
 
     BoxWithConstraints {
-        val fabPosition =
+        fabPosition.value =
             if (this.maxWidth < Value.Limit.minWidthRequiredFabToLeft) FabPosition.Center
             else FabPosition.End
 
@@ -125,7 +126,7 @@ fun ViewNoteList(
             floatingActionButton = {
                 ViewNoteListFab(navigationController, this, fabTransitionState)
             },
-            floatingActionButtonPosition = fabPosition,
+            floatingActionButtonPosition = fabPosition.value,
         ) { padding ->
             NoteList(
                 navigationController,
