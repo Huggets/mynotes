@@ -5,6 +5,7 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
@@ -100,9 +101,12 @@ fun EditNote(
         val onDelete: () -> Unit = {
             showDeleteConfirmation.value = true
         }
+        val onBack: () -> Unit = {
+            showCancelConfirmation.value = true
+        }
 
         Scaffold(
-            topBar = { EditNoteAppBar(onDelete = onDelete, onSave = onSave) },
+            topBar = { EditNoteAppBar(onDelete = onDelete, onSave = onSave, onBack = onBack) },
         ) { paddingValues ->
             Column(
                 Modifier
@@ -139,6 +143,7 @@ fun EditNote(
 private fun EditNoteAppBar(
     onDelete: () -> Unit,
     onSave: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -149,6 +154,11 @@ private fun EditNoteAppBar(
             }
             IconButton(onClick = onSave) {
                 Icon(Icons.Filled.Done, "Save note")
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Filled.ArrowBack, "Cancel note")
             }
         },
         modifier = modifier,
