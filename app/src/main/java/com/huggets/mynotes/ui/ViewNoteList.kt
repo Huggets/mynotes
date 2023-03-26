@@ -77,10 +77,14 @@ fun ViewNoteList(
     val isNoteSelected = rememberSaveable(saver = saver) { mutableStateMapOf() }
     val selectedCount = rememberSaveable { mutableStateOf(0) }
 
-    val fabTransitionState = remember { MutableTransitionState(!selectionMode.value) }
+    val fabWasShown = rememberSaveable { mutableStateOf(true) }
+    val fabTransitionState = remember { MutableTransitionState(fabWasShown.value) }
     val deleteIconTransitionState = remember { MutableTransitionState(selectionMode.value) }
-    fabTransitionState.targetState = !selectionMode.value
+    fabTransitionState.targetState = if (fabWasShown.value) !selectionMode.value else false
     deleteIconTransitionState.targetState = selectionMode.value
+    if (!selectionMode.value) {
+        fabWasShown.value = fabTransitionState.targetState
+    }
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
@@ -135,6 +139,7 @@ fun ViewNoteList(
                 isNoteSelected,
                 selectedCount,
                 fabTransitionState,
+                fabWasShown,
                 Modifier.padding(padding)
             )
 
@@ -162,7 +167,6 @@ fun ViewNoteList(
 }
 
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteList(
     navigationController: NavHostController,
@@ -171,6 +175,7 @@ private fun NoteList(
     isNoteSelected: SnapshotStateMap<Long, Boolean>,
     selectedCount: MutableState<Int>,
     fabTransitionState: MutableTransitionState<Boolean>,
+    fabWasShown: MutableState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
     val onClick: (Long) -> Unit = { id ->
@@ -217,15 +222,23 @@ private fun NoteList(
         val lastListElementIndex =
             rememberSaveable { mutableStateOf(listState.firstVisibleItemIndex) }
 
-        if (!selectionMode.value && listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
             val currentIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
 
             if (lastListElementIndex.value > currentIndex) {
                 lastListElementIndex.value = currentIndex
-                fabTransitionState.targetState = true
+
+                if (!selectionMode.value) {
+                    fabTransitionState.targetState = true
+                    fabWasShown.value = true
+                }
             } else if (lastListElementIndex.value < currentIndex) {
                 lastListElementIndex.value = currentIndex
-                fabTransitionState.targetState = false
+
+                if (!selectionMode.value) {
+                    fabTransitionState.targetState = false
+                    fabWasShown.value = false
+                }
             }
         }
 

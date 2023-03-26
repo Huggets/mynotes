@@ -74,8 +74,6 @@ fun NoteApp(
                         } else {
                             null
                         }
-
-
                     },
                     exitTransition = {
                         if (this.targetState.destination.route == Destinations.editNoteRoute) {
