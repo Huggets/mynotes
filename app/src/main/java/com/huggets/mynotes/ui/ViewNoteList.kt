@@ -33,33 +33,30 @@ import com.huggets.mynotes.note.NoteItemUiState
 import com.huggets.mynotes.theme.*
 
 private val exitScreen = Value.Animation.exitScreen<Float>()
-private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(
-    save = {
-        val builder = StringBuilder()
-        for ((id, value) in it) {
-            builder.append(id)
-            builder.append(':')
-            builder.append(value)
-            builder.append(';')
-        }
-        if (builder.lastIndex != -1) {
-            builder.delete(builder.lastIndex, builder.lastIndex + 1)
-        }
-        builder.toString()
-    },
-    restore = {
-        val map = SnapshotStateMap<Long, Boolean>()
-        val items = it.split(';')
-        if (items[0] != "") {
-            for (item in items) {
-                val (id, value) = item.split(':')
-                map[id.toLong()] = value.toBoolean()
-            }
-        }
-
-        map
+private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(save = {
+    val builder = StringBuilder()
+    for ((id, value) in it) {
+        builder.append(id)
+        builder.append(':')
+        builder.append(value)
+        builder.append(';')
     }
-)
+    if (builder.lastIndex != -1) {
+        builder.delete(builder.lastIndex, builder.lastIndex + 1)
+    }
+    builder.toString()
+}, restore = {
+    val map = SnapshotStateMap<Long, Boolean>()
+    val items = it.split(';')
+    if (items[0] != "") {
+        for (item in items) {
+            val (id, value) = item.split(':')
+            map[id.toLong()] = value.toBoolean()
+        }
+    }
+
+    map
+})
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,8 +108,7 @@ fun ViewNoteList(
 
     DisposableEffect(lifecycleOwner, backDispatcher) {
         backDispatcher?.onBackPressedDispatcher?.addCallback(
-            lifecycleOwner,
-            onBackPressed
+            lifecycleOwner, onBackPressed
         )
 
         onDispose {
@@ -144,8 +140,7 @@ fun ViewNoteList(
             )
 
             ConfirmationDialog(
-                displayDialog = showDeleteConfirmation,
-                onConfirmation = {
+                displayDialog = showDeleteConfirmation, onConfirmation = {
                     selectedCount.value = 0
                     selectionMode.value = false
 
@@ -159,8 +154,7 @@ fun ViewNoteList(
                     }
 
                     deleteNotes(toDelete)
-                },
-                confirmationMessage = "Are you sure you want to delete the selected note(s)?"
+                }, confirmationMessage = "Are you sure you want to delete the selected note(s)?"
             )
         }
     }
@@ -211,9 +205,7 @@ private fun NoteList(
                 .padding(Value.smallPadding)
         ) {
             Text(
-                text = "No notes",
-                fontSize = 20.sp,
-                modifier = Modifier.align(Alignment.Center)
+                text = "No notes", fontSize = 20.sp, modifier = Modifier.align(Alignment.Center)
             )
         }
 
@@ -244,9 +236,16 @@ private fun NoteList(
 
         LazyColumn(
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(Value.smallPadding),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = modifier.fillMaxWidth(),
         ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .height(8.dp)
+                        .fillMaxWidth()
+                )
+            }
             for (note in appState.value.items) {
                 item(key = note.id) {
                     NoteElement(
@@ -256,6 +255,13 @@ private fun NoteList(
                         onLongClick,
                     )
                 }
+            }
+            item {
+                Box(
+                    modifier = Modifier
+                        .height(8.dp)
+                        .fillMaxWidth()
+                )
             }
         }
     }
@@ -287,11 +293,7 @@ private fun NoteElement(
         color = color,
         contentColor = contentColor,
         shape = ShapeDefaults.Small,
-        modifier = modifier
-            .padding(
-                Value.smallPadding,
-                0.dp
-            ),
+        modifier = modifier.padding(Value.smallPadding, 0.dp),
     ) {
         var boxWidth by remember { mutableStateOf(0.dp) }
         val density = LocalDensity.current
@@ -299,10 +301,8 @@ private fun NoteElement(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onClick(note.id) },
-                    onLongClick = { onLongClick(note.id) }
-                )
+                .combinedClickable(onClick = { onClick(note.id) },
+                    onLongClick = { onLongClick(note.id) })
                 .onGloballyPositioned {
                     boxWidth = with(density) { it.size.width.toDp() }
                 },
@@ -326,16 +326,12 @@ private fun NoteElement(
                     fontSize = 16.sp,
                 )
             }
-            Surface(
-                color = selectionColor,
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(
-                        if (isSelected == true) 0.5f
-                        else 0f
-                    ),
-                content = {}
-            )
+            Surface(color = selectionColor, modifier = Modifier
+                .matchParentSize()
+                .alpha(
+                    if (isSelected == true) 0.5f
+                    else 0f
+                ), content = {})
         }
     }
 }
