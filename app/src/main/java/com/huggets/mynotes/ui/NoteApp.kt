@@ -62,6 +62,8 @@ fun NoteApp(
                     Destinations.viewNoteListRoute,
                     enterTransition = {
                         if (this.initialState.destination.route == Destinations.editNoteRoute) {
+                            // Enter from EditNote
+
                             val newNote =
                                 this.initialState.arguments?.getString(Destinations.ParametersName.noteId)
                                     ?.toLong() == 0L
@@ -77,6 +79,8 @@ fun NoteApp(
                     },
                     exitTransition = {
                         if (this.targetState.destination.route == Destinations.editNoteRoute) {
+                            // Exit to EditNote
+
                             val newNote =
                                 this.targetState.arguments?.getString(Destinations.ParametersName.noteId)
                                     ?.toLong() == 0L
@@ -95,7 +99,6 @@ fun NoteApp(
                         for (id in noteIds) {
                             noteViewModel.deleteNote(id)
                         }
-                        noteViewModel.fetchNotes()
                     }
                     ViewNoteList(
                         quitApplication,
@@ -151,11 +154,9 @@ fun NoteApp(
                             .toLong()
                     val saveNote: (NoteItemUiState) -> Unit = {
                         noteViewModel.saveNote(it)
-                        noteViewModel.fetchNotes()
                     }
                     val deleteNote: (Long) -> Unit = {
                         noteViewModel.deleteNote(it)
-                        noteViewModel.fetchNotes()
                     }
 
                     EditNote(
