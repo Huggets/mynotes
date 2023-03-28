@@ -47,6 +47,8 @@ fun EditNote(
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Add a callback called when back is pressed
+    // Remove it when leaving the composition
     DisposableEffect(lifecycleOwner, backDispatcher) {
         backDispatcher?.onBackPressedDispatcher?.addCallback(
             lifecycleOwner,
