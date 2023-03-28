@@ -3,6 +3,8 @@ package com.huggets.mynotes.note
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huggets.mynotes.ui.NoteAppUiState
+import com.huggets.mynotes.ui.NoteItemUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch

@@ -16,9 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.navigation.NavHostController
-import com.huggets.mynotes.note.NoteAppUiState
-import com.huggets.mynotes.note.NoteItemUiState
-import com.huggets.mynotes.note.find
 import com.huggets.mynotes.theme.*
 
 /**

@@ -28,8 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
-import com.huggets.mynotes.note.NoteAppUiState
-import com.huggets.mynotes.note.NoteItemUiState
 import com.huggets.mynotes.theme.*
 
 private val exitScreen = Value.Animation.exitScreen<Float>()
@@ -159,7 +157,6 @@ fun ViewNoteList(
         }
     }
 }
-
 
 @Composable
 private fun NoteList(
@@ -298,6 +295,9 @@ private fun NoteElement(
         var boxWidth by remember { mutableStateOf(0.dp) }
         val density = LocalDensity.current
 
+        val selectionState = remember { MutableTransitionState(isSelected == true) }
+        selectionState.targetState = isSelected == true
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -326,12 +326,19 @@ private fun NoteElement(
                     fontSize = 16.sp,
                 )
             }
-            Surface(color = selectionColor, modifier = Modifier
-                .matchParentSize()
-                .alpha(
-                    if (isSelected == true) 0.5f
-                    else 0f
-                ), content = {})
+            AnimatedVisibility(
+                visibleState = selectionState,
+                enter = fadeIn(exitScreen),
+                exit = fadeOut(exitScreen),
+                modifier = Modifier.matchParentSize()
+            ) {
+                Surface(
+                    color = selectionColor,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .alpha(0.5f),
+                    content = {})
+            }
         }
     }
 }

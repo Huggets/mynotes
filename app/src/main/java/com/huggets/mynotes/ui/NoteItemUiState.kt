@@ -1,4 +1,6 @@
-package com.huggets.mynotes.note
+package com.huggets.mynotes.ui
+
+import com.huggets.mynotes.note.Note
 
 data class NoteItemUiState(
     val id: Long,

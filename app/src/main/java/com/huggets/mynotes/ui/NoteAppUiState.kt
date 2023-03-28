@@ -1,4 +1,4 @@
-package com.huggets.mynotes.note
+package com.huggets.mynotes.ui
 
 data class NoteAppUiState(
     val items: List<NoteItemUiState> = listOf(),
