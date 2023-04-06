@@ -72,5 +72,5 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
 
     implementation "androidx.activity:activity-compose:1.7.0"
-    implementation "androidx.core:core-ktx:1.9.0"
+    implementation "androidx.core:core-ktx:1.10.0"
 }
