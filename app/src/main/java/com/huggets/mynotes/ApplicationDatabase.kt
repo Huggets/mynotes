@@ -10,7 +10,7 @@ import com.huggets.mynotes.note.NoteDao
 @Database(
     version = 1,
     entities = [Note::class],
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class ApplicationDatabase : RoomDatabase() {
 
