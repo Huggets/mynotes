@@ -116,7 +116,7 @@ fun NoteEditing(
         )
         AlertDialog(
             displayDialog = showTitleEmptyDialog,
-            message = "Title cannot be empty",
+            message = "Title cannot be empty!",
         )
 
         Scaffold(
@@ -231,7 +231,7 @@ private fun AssociatedNotes(
                 enabled = parentExists,
             ) {
                 if (parentExists) {
-                    Text("Add associated note")
+                    Text("Associate note a new note")
                 } else {
                     Text("You need to save before adding associated notes")
                 }
