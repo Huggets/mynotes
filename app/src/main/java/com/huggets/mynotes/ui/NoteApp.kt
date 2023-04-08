@@ -50,7 +50,7 @@ fun NoteApp(
     val fadeInSpec = tween<Float>(enterScreen.durationMillis)
     val fadeOutSpec = tween<Float>(exitScreenPermanently.durationMillis)
 
-    noteViewModel.fetchNotes()
+    noteViewModel.fetchUiState()
 
     AppTheme {
         Surface {
@@ -152,17 +152,21 @@ fun NoteApp(
                     val noteId =
                         backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
                             .toLong()
-                    val saveNote: (NoteItemUiState) -> Unit = {
-                        noteViewModel.saveNote(it)
+                    val parentNoteId =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteId)!!
+                            .toLong()
+                    val saveNote: (NoteItemUiState, Long) -> Unit = { note, parentId ->
+                        noteViewModel.saveNote(note, parentId)
                     }
                     val deleteNote: (Long) -> Unit = {
                         noteViewModel.deleteNote(it)
                     }
 
-                    EditNote(
+                    NoteEditing(
                         navigationController,
                         appState,
                         noteId,
+                        parentNoteId,
                         saveNote,
                         deleteNote,
                     )

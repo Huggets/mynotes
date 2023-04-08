@@ -2,21 +2,23 @@ package com.huggets.mynotes.note
 
 import android.content.Context
 import com.huggets.mynotes.ApplicationDatabase
-import kotlinx.coroutines.flow.Flow
 
 class NoteRepository(context: Context) {
 
     private val noteDao = ApplicationDatabase.getDb(context).noteDao()
 
-    fun fetchNotes(): Flow<List<Note>> {
-        return noteDao.getAllNotes()
-    }
+    suspend fun save(note: Note) = noteDao.insert(note)
 
-    suspend fun saveNote(note: Note) {
-        noteDao.insert(note)
-    }
+    suspend fun update(note: Note) = noteDao.update(note)
 
-    suspend fun deleteNote(noteId: Long): Boolean {
-        return noteDao.delete(noteId) > 0
-    }
+    suspend fun delete(noteId: Long) = noteDao.delete(noteId) > 0
+
+    fun fetchAllNotes() = noteDao.getAll()
+
+    fun fetchMainNotes() = noteDao.getMainNotes()
+
+    /**
+     * Get all children of a note recursively
+     */
+    suspend fun getChildren(parentId: Long) = noteDao.getChildren(parentId)
 }

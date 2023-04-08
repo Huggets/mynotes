@@ -195,7 +195,7 @@ private fun NoteList(
         }
     }
 
-    if (appState.value.items.isEmpty()) {
+    if (appState.value.mainNoteIds.isEmpty()) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -243,14 +243,29 @@ private fun NoteList(
                         .fillMaxWidth()
                 )
             }
-            for (note in appState.value.items) {
-                item(key = note.id) {
-                    NoteElement(
-                        note,
-                        isNoteSelected[note.id],
-                        onClick,
-                        onLongClick,
-                    )
+            for (mainNoteId in appState.value.mainNoteIds) {
+                item(key = mainNoteId) {
+                    val note = appState.value.allNotes.find(mainNoteId)
+
+                    if (note != null) {
+                        NoteElement(
+                            note,
+                            isNoteSelected[note.id],
+                            onClick,
+                            onLongClick,
+                        )
+                    } else {
+                        NoteElement(
+                            NoteItemUiState(
+                                id = mainNoteId,
+                                title = "Loading...",
+                                content = "The note is loading...",
+                            ),
+                            isNoteSelected[mainNoteId],
+                            onClick,
+                            onLongClick,
+                        )
+                    }
                 }
             }
             item {
@@ -310,10 +325,7 @@ private fun NoteElement(
             Column(
                 modifier = Modifier.padding(Value.smallPadding)
             ) {
-                val title = note.title.let {
-                    if (it.isBlank()) "No title"
-                    else shortened(it, 1f, density, boxWidth, 16.sp)
-                }
+                val title = shortened(note.title, 1f, density, boxWidth, 16.sp)
                 val content = shortened(note.content, 5f, density, boxWidth, 16.sp)
 
                 Text(

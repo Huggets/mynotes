@@ -1,6 +1,7 @@
 package com.huggets.mynotes.ui
 
 data class NoteAppUiState(
-    val items: List<NoteItemUiState> = listOf(),
-    val isFetchingItem: Boolean = false,
+    val allNotes: List<NoteItemUiState> = listOf(),
+    val mainNoteIds: List<Long> = listOf(),
+    val noteAssociations: List<NoteAssociationItemUiState> = listOf(),
 )
