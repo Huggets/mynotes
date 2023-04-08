@@ -254,17 +254,6 @@ private fun NoteElementList(
                             onClick,
                             onLongClick,
                         )
-                    } else {
-                        NoteElement(
-                            NoteItemUiState(
-                                id = mainNoteId,
-                                title = "Loading...",
-                                content = "The note is loading...",
-                            ),
-                            isNoteSelected[mainNoteId],
-                            onClick,
-                            onLongClick,
-                        )
                     }
                 }
             }
