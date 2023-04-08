@@ -17,7 +17,7 @@ interface NoteDao {
     @Query("SELECT * FROM note")
     fun getAll(): Flow<List<Note>>
 
-    @Query("SELECT note.id FROM note WHERE note.id NOT IN (SELECT DISTINCT child_id FROM note_association)")
+    @Query("SELECT note.id FROM note WHERE note.id NOT IN (SELECT DISTINCT child_id FROM note_association) ORDER BY note.last_edit_time DESC")
     fun getMainNotes(): Flow<List<Long>>
 
     /**

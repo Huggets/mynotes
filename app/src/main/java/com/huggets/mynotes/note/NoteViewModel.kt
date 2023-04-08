@@ -24,7 +24,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                 val list = mutableListOf<NoteItemUiState>()
 
                 it.forEach { note ->
-                    list.add(NoteItemUiState(note.id, note.title, note.content))
+                    list.add(NoteItemUiState(note))
                 }
 
                 _uiState.value = _uiState.value.copy(allNotes = list)
@@ -48,12 +48,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                 val list = mutableListOf<NoteAssociationItemUiState>()
 
                 it.forEach { noteAssociation ->
-                    list.add(
-                        NoteAssociationItemUiState(
-                            noteAssociation.parentId,
-                            noteAssociation.childId
-                        )
-                    )
+                    list.add(NoteAssociationItemUiState(noteAssociation))
                 }
 
                 _uiState.value = _uiState.value.copy(noteAssociations = list)

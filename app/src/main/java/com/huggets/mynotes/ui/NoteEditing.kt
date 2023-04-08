@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.theme.*
+import java.util.*
 
 /**
  * Edit a new note if newNote is true. Otherwise edit an existing one,
@@ -74,7 +75,7 @@ fun NoteEditing(
         }
     } else {
         val note = if (isNewNote) {
-            NoteItemUiState(0, "", "")
+            NoteItemUiState(0, "", "", NoteItemUiState.getCurrentEditTime())
         } else {
             appState.value.allNotes.find(noteId)
                 ?: throw NoSuchElementException("Note with id=$noteId not found")
@@ -86,7 +87,14 @@ fun NoteEditing(
             if (title.value.isBlank()) {
                 showTitleEmptyDialog.value = true
             } else {
-                saveNote(NoteItemUiState(note.id, title.value, content.value), parentNoteId)
+                saveNote(
+                    NoteItemUiState(
+                        note.id,
+                        title.value,
+                        content.value,
+                        NoteItemUiState.getCurrentEditTime()
+                    ), parentNoteId
+                )
                 navigationController.popBackStack()
             }
         }
