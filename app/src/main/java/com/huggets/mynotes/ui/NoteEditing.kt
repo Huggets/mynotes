@@ -76,7 +76,7 @@ fun NoteEditing(
             NoteItemUiState(0, "", "")
         } else {
             appState.value.allNotes.find(noteId)
-                ?: throw Exception("Note with id=$noteId not found")
+                ?: throw NoSuchElementException("Note with id=$noteId not found")
         }
 
         val title = rememberSaveable { mutableStateOf(note.title) }
@@ -239,7 +239,9 @@ private fun AssociatedNotes(
         }
         for (associatedNote in associatedNotes) {
             val note = notes.find(associatedNote.childId).let {
-                it ?: throw Exception("Note with id=${associatedNote.childId} not found")
+                it ?: throw NoSuchElementException(
+                    "Note with id=${associatedNote.childId} not found"
+                )
             }
 
             item(associatedNote.childId) {
