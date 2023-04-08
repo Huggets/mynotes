@@ -109,7 +109,7 @@ fun NoteApp(
                             noteViewModel.deleteNote(id)
                         }
                     }
-                    ViewNoteList(
+                    NoteList(
                         quitApplication,
                         navigationController,
                         appState,

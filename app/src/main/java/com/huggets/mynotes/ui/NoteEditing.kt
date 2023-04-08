@@ -120,7 +120,7 @@ fun NoteEditing(
         )
 
         Scaffold(
-            topBar = { EditNoteAppBar(onDelete = onDelete, onSave = onSave, onBack = onBack) },
+            topBar = { AppBar(onDelete = onDelete, onSave = onSave, onBack = onBack) },
         ) { paddingValues ->
             Column(
                 Modifier
@@ -130,7 +130,7 @@ fun NoteEditing(
             ) {
                 val index = rememberSaveable { mutableStateOf(0) }
 
-                EditNoteTab(index = index)
+                Tab(index = index)
 
                 if (index.value == 0) {
                     Editing(title, content)
@@ -156,7 +156,7 @@ fun NoteEditing(
 }
 
 @Composable
-private fun EditNoteTab(
+private fun Tab(
     index: MutableState<Int>,
     modifier: Modifier = Modifier,
 ) {
@@ -290,7 +290,7 @@ private fun AssociatedNoteElement(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EditNoteAppBar(
+private fun AppBar(
     onDelete: () -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,

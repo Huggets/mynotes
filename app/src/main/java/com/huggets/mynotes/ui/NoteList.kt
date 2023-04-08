@@ -58,7 +58,7 @@ private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(save = {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ViewNoteList(
+fun NoteList(
     quitApplication: () -> Unit,
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
@@ -120,13 +120,13 @@ fun ViewNoteList(
             else FabPosition.End
 
         Scaffold(
-            topBar = { ViewNoteListAppBar(deleteSelectedNote, deleteIconTransitionState) },
+            topBar = { AppBar(deleteSelectedNote, deleteIconTransitionState) },
             floatingActionButton = {
-                ViewNoteListFab(navigationController, this, fabTransitionState)
+                Fab(navigationController, this, fabTransitionState)
             },
             floatingActionButtonPosition = fabPosition.value,
         ) { padding ->
-            NoteList(
+            NoteElementList(
                 navigationController,
                 appState,
                 selectionMode,
@@ -159,7 +159,7 @@ fun ViewNoteList(
 }
 
 @Composable
-private fun NoteList(
+private fun NoteElementList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     selectionMode: MutableState<Boolean>,
@@ -357,7 +357,7 @@ private fun NoteElement(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ViewNoteListAppBar(
+private fun AppBar(
     deleteSelectedNote: () -> Unit,
     deleteIconState: MutableTransitionState<Boolean>,
     modifier: Modifier = Modifier,
@@ -381,7 +381,7 @@ private fun ViewNoteListAppBar(
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-private fun ViewNoteListFab(
+private fun Fab(
     navigationController: NavHostController,
     constraintsScope: BoxWithConstraintsScope,
     transitionState: MutableTransitionState<Boolean>,
