@@ -86,7 +86,7 @@ fun NoteEditing(
                 showTitleEmptyDialog.value = true
             } else {
                 saveNote(NoteItemUiState(note.id, title.value, content.value), parentNoteId)
-                navigationController.navigateUp()
+                navigationController.popBackStack()
             }
         }
         val onDelete: () -> Unit = {
@@ -103,14 +103,14 @@ fun NoteEditing(
                     deleteNote(noteId)
                     isDeleted = true
                 }
-                navigationController.navigateUp()
+                navigationController.popBackStack()
             },
             confirmationMessage = "Are you sure you want to delete this note?"
         )
         ConfirmationDialog(
             displayDialog = showCancelConfirmation,
             onConfirmation = {
-                navigationController.navigateUp()
+                navigationController.popBackStack()
             },
             confirmationMessage = "Cancel changes?",
         )

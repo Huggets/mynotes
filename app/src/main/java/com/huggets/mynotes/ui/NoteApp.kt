@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
@@ -45,10 +46,38 @@ fun NoteApp(
         rememberSaveable(stateSaver = fabPositionSaver) { mutableStateOf(FabPosition.Center) }
 
     val slideOffset = 0.2f
-    val enterScreen = Animation.enterScreen<IntOffset>()
-    val exitScreenPermanently = Animation.exitScreenPermanently<IntOffset>()
-    val fadeInSpec = tween<Float>(enterScreen.durationMillis)
-    val fadeOutSpec = tween<Float>(exitScreenPermanently.durationMillis)
+    val enterScreenSpec = Animation.enterScreen<IntOffset>()
+    val exitScreenPermanentlySpec = Animation.exitScreenPermanently<IntOffset>()
+    val fadeInSpec = tween<Float>(enterScreenSpec.durationMillis)
+    val fadeOutSpec = tween<Float>(exitScreenPermanentlySpec.durationMillis)
+
+    val enterScreenFromRight =
+        (fadeIn(fadeInSpec) + slideInHorizontally(enterScreenSpec) { (it * slideOffset).toInt() })
+    val enterScreenFromLeft =
+        (fadeIn(fadeInSpec) + slideInHorizontally(enterScreenSpec) { -(it * slideOffset).toInt() })
+    val leaveScreenToRight =
+        (fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanentlySpec) { (it * slideOffset).toInt() })
+    val leaveScreenToLeft =
+        (fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanentlySpec) { -(it * slideOffset).toInt() })
+    val inNewNoteCenter =
+        (scaleIn(transformOrigin = TransformOrigin(0.5f, 1f)) +
+                slideIn { IntOffset(0, it.height) })
+    val inNewNoteRight =
+        (scaleIn(
+            transformOrigin = TransformOrigin(1f, 1f)
+        ) + slideIn { IntOffset(it.width, it.height) })
+    val outNewNoteCenter =
+        (scaleOut(
+            transformOrigin = TransformOrigin(0.5f, 1f)
+        ) + slideOut { IntOffset(0, it.height) })
+    val outNewNoteRight =
+        (scaleOut(
+            transformOrigin = TransformOrigin(1f, 1f)
+        ) + slideOut { IntOffset(it.width, it.height) })
+
+    val isNewNote: (NavBackStackEntry) -> Boolean = {
+        it.arguments?.getString(Destinations.ParametersName.noteId)?.toLong() == 0L
+    }
 
     noteViewModel.fetchUiState()
 
@@ -60,40 +89,20 @@ fun NoteApp(
             ) {
                 composable(
                     Destinations.viewNoteListRoute,
-                    enterTransition = {
-                        if (this.initialState.destination.route == Destinations.editNoteRoute) {
-                            // Enter from EditNote
-
-                            val newNote =
-                                this.initialState.arguments?.getString(Destinations.ParametersName.noteId)
-                                    ?.toLong() == 0L
-
-                            if (newNote) {
-                                null
-                            } else {
-                                fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { -(it * slideOffset).toInt() }
-                            }
-                        } else {
+                    popEnterTransition = {
+                        if (isNewNote(initialState)) {
                             null
+                        } else {
+                            enterScreenFromLeft
                         }
                     },
                     exitTransition = {
-                        if (this.targetState.destination.route == Destinations.editNoteRoute) {
-                            // Exit to EditNote
-
-                            val newNote =
-                                this.targetState.arguments?.getString(Destinations.ParametersName.noteId)
-                                    ?.toLong() == 0L
-
-                            if (newNote) {
-                                null
-                            } else {
-                                fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { -(it * slideOffset).toInt() }
-                            }
-                        } else {
+                        if (isNewNote(targetState)) {
                             null
+                        } else {
+                            leaveScreenToLeft
                         }
-                    }
+                    },
                 ) {
                     val deleteNotes: (List<Long>) -> Unit = { noteIds ->
                         for (id in noteIds) {
@@ -111,42 +120,37 @@ fun NoteApp(
                 composable(
                     Destinations.editNoteRoute,
                     enterTransition = {
-                        val newNote =
-                            this.targetState.arguments?.getString(Destinations.ParametersName.noteId)
-                                ?.toLong() == 0L
-
-                        if (newNote) {
+                        if (this.initialState.destination.route == Destinations.viewNoteListRoute &&
+                            isNewNote(targetState)
+                        ) {
                             if (fabPosition.value == FabPosition.Center) {
-                                scaleIn(
-                                    transformOrigin = TransformOrigin(0.5f, 1f)
-                                ) + slideIn { IntOffset(0, it.height) }
+                                inNewNoteCenter
                             } else {
-                                scaleIn(
-                                    transformOrigin = TransformOrigin(1f, 1f)
-                                ) + slideIn { IntOffset(it.width, it.height) }
+                                inNewNoteRight
                             }
+
                         } else {
-                            fadeIn(fadeInSpec) + slideInHorizontally(enterScreen) { (it * slideOffset).toInt() }
+                            enterScreenFromRight
                         }
                     },
-                    exitTransition = {
-                        val newNote =
-                            this.initialState.arguments?.getString(Destinations.ParametersName.noteId)
-                                ?.toLong() == 0L
-
-                        if (newNote) {
+                    popExitTransition = {
+                        if (targetState.destination.route == Destinations.viewNoteListRoute &&
+                            isNewNote(initialState)
+                        ) {
                             if (fabPosition.value == FabPosition.Center) {
-                                scaleOut(
-                                    transformOrigin = TransformOrigin(0.5f, 1f)
-                                ) + slideOut { IntOffset(0, it.height) }
+                                outNewNoteCenter
                             } else {
-                                scaleOut(
-                                    transformOrigin = TransformOrigin(1f, 1f)
-                                ) + slideOut { IntOffset(it.width, it.height) }
+                                outNewNoteRight
                             }
                         } else {
-                            fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanently) { (it * slideOffset).toInt() }
+                            leaveScreenToRight
                         }
+                    },
+                    popEnterTransition = {
+                        enterScreenFromLeft
+                    },
+                    exitTransition = {
+                        leaveScreenToLeft
                     },
                 ) { backStackEntry ->
                     val noteId =
