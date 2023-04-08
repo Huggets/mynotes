@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -285,7 +286,7 @@ private fun AssociatedNoteElement(
         modifier = modifier.clickable { onClick() },
     ) {
         Row(modifier = Modifier.padding(Value.smallPadding)) {
-            Text(text)
+            Text(text, fontWeight = FontWeight.Bold)
         }
     }
 }
