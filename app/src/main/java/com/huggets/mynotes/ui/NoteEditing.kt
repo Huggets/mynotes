@@ -317,7 +317,7 @@ private fun AssociatedNotes(
                 enabled = parentExists,
             ) {
                 if (parentExists) {
-                    Text("Associate note a new note")
+                    Text("Associate a new note")
                 } else {
                     Text("You need to save before adding associated notes")
                 }
