@@ -30,7 +30,7 @@ import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
 import com.huggets.mynotes.theme.*
 
-private val exitScreen = Value.Animation.emphasized<Float>()
+private val emphasizedFloat = Value.Animation.emphasized<Float>()
 private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(save = {
     val builder = StringBuilder()
     for ((id, value) in it) {
@@ -325,8 +325,8 @@ private fun NoteElement(
             }
             AnimatedVisibility(
                 visibleState = selectionState,
-                enter = fadeIn(exitScreen),
-                exit = fadeOut(exitScreen),
+                enter = fadeIn(emphasizedFloat),
+                exit = fadeOut(emphasizedFloat),
                 modifier = Modifier.matchParentSize()
             ) {
                 Surface(
@@ -354,8 +354,8 @@ private fun AppBar(
         actions = {
             AnimatedVisibility(
                 visibleState = deleteIconState,
-                enter = fadeIn(exitScreen),
-                exit = fadeOut(exitScreen),
+                enter = fadeIn(emphasizedFloat),
+                exit = fadeOut(emphasizedFloat),
             ) {
                 IconButton(onClick = deleteSelectedNote) {
                     Icon(Icons.Filled.Delete, "Delete selected notes")
@@ -402,8 +402,8 @@ private fun Fab(
 
     AnimatedVisibility(
         visibleState = transitionState,
-        enter = scaleIn(exitScreen),
-        exit = scaleOut(exitScreen),
+        enter = scaleIn(emphasizedFloat),
+        exit = scaleOut(emphasizedFloat),
     ) {
         if (constraintsScope.maxWidth < Value.Limit.minWidthRequiredExtendedFab) {
             FloatingActionButton(onClick = openNewNote) {
