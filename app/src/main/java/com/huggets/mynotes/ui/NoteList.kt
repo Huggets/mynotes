@@ -19,7 +19,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -30,7 +29,7 @@ import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
 import com.huggets.mynotes.theme.*
 
-private val exitScreen = Value.Animation.exitScreen<Float>()
+private val exitScreen = Value.Animation.emphasized<Float>()
 private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(save = {
     val builder = StringBuilder()
     for ((id, value) in it) {
@@ -277,22 +276,9 @@ private fun NoteElement(
     onLongClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val color: Color
-    val contentColor: Color
-    val selectionColor: Color
-    if (isSystemInDarkTheme()) {
-        color = md_theme_dark_surfaceVariant
-        contentColor = md_theme_dark_onSurfaceVariant
-        selectionColor = md_theme_dark_inverseSurface
-    } else {
-        color = md_theme_light_surfaceVariant
-        contentColor = md_theme_light_onSurfaceVariant
-        selectionColor = md_theme_light_inverseSurface
-    }
-
     Surface(
-        color = color,
-        contentColor = contentColor,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
         modifier = modifier.padding(Value.smallPadding, 0.dp),
     ) {
@@ -334,7 +320,7 @@ private fun NoteElement(
                 modifier = Modifier.matchParentSize()
             ) {
                 Surface(
-                    color = selectionColor,
+                    color = MaterialTheme.colorScheme.inverseSurface,
                     modifier = Modifier
                         .matchParentSize()
                         .alpha(0.5f),

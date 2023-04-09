@@ -20,6 +20,7 @@ import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.huggets.mynotes.note.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
 import com.huggets.mynotes.ui.Value.Animation
+import com.huggets.mynotes.ui.Value.Animation.slideOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
@@ -45,9 +46,8 @@ fun NoteApp(
     val fabPosition =
         rememberSaveable(stateSaver = fabPositionSaver) { mutableStateOf(FabPosition.Center) }
 
-    val slideOffset = 0.2f
-    val enterScreenSpec = Animation.enterScreen<IntOffset>()
-    val exitScreenPermanentlySpec = Animation.exitScreenPermanently<IntOffset>()
+    val enterScreenSpec = Animation.emphasizedDecelerate<IntOffset>()
+    val exitScreenPermanentlySpec = Animation.emphasizedAccelerate<IntOffset>()
     val fadeInSpec = tween<Float>(enterScreenSpec.durationMillis)
     val fadeOutSpec = tween<Float>(exitScreenPermanentlySpec.durationMillis)
 

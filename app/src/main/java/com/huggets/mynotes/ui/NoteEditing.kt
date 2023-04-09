@@ -2,8 +2,11 @@ package com.huggets.mynotes.ui
 
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.animation.*
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -25,10 +27,6 @@ import androidx.navigation.NavHostController
 import com.huggets.mynotes.theme.*
 import java.util.*
 
-/**
- * Edit a new note if newNote is true. Otherwise edit an existing one,
- * contained in notes.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditing(
@@ -139,25 +137,56 @@ fun NoteEditing(
             ) {
                 val index = rememberSaveable { mutableStateOf(0) }
 
-                Tab(index = index)
+                val editingVisibilityState = remember { MutableTransitionState(index.value == 0) }
+                val associationVisibilityState =
+                    remember { MutableTransitionState(index.value == 1) }
 
-                if (index.value == 0) {
-                    Editing(title, content)
-                } else if (index.value == 1) {
-                    val associatedNotes: MutableList<NoteAssociationItemUiState> = mutableListOf()
+                val swipeDuration = 300
+                val swipeInLeftTransition =
+                    slideInHorizontally(Value.Animation.emphasized(swipeDuration)) { (it + it * Value.Animation.slideOffset).toInt() }
+                val swipeInRightTransition =
+                    slideInHorizontally(Value.Animation.emphasized(swipeDuration)) { -(it + it * Value.Animation.slideOffset).toInt() }
+                val swipeOutLeftTransition =
+                    slideOutHorizontally(Value.Animation.emphasized(swipeDuration)) { -(it + it * Value.Animation.slideOffset).toInt() }
+                val swipeOutRightTransition =
+                    slideOutHorizontally(Value.Animation.emphasized(swipeDuration)) { (it + it * Value.Animation.slideOffset).toInt() }
 
-                    appState.value.noteAssociations.forEach {
-                        if (it.parentId == noteId) {
-                            associatedNotes += it
-                        }
+                Tab(
+                    index = index,
+                    editingVisibilityState = editingVisibilityState,
+                    associationVisibilityState = associationVisibilityState,
+                    swipeDuration = swipeDuration,
+                )
+
+                Box {
+                    this@Column.AnimatedVisibility(
+                        visibleState = editingVisibilityState,
+                        enter = swipeInRightTransition,
+                        exit = swipeOutLeftTransition,
+                    ) {
+                        Editing(title, content)
                     }
+                    this@Column.AnimatedVisibility(
+                        visibleState = associationVisibilityState,
+                        enter = swipeInLeftTransition,
+                        exit = swipeOutRightTransition,
+                    ) {
+                        val associatedNotes: MutableList<NoteAssociationItemUiState> =
+                            mutableListOf()
 
-                    AssociatedNotes(
-                        parentNoteId = noteId,
-                        associatedNotes = associatedNotes,
-                        notes = appState.value.allNotes,
-                        navigationController = navigationController,
-                    )
+                        appState.value.noteAssociations.forEach {
+                            if (it.parentId == noteId) {
+                                associatedNotes += it
+                            }
+                        }
+
+                        AssociatedNotes(
+                            parentNoteId = noteId,
+                            associatedNotes = associatedNotes,
+                            notes = appState.value.allNotes,
+                            navigationController = navigationController,
+                        )
+                    }
                 }
             }
         }
@@ -165,21 +194,69 @@ fun NoteEditing(
 }
 
 @Composable
-private fun Tab(
-    index: MutableState<Int>,
+private fun TabIndicator(
     modifier: Modifier = Modifier,
 ) {
+    Box(modifier) {
+        Surface(
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp),
+            content = {},
+        )
+    }
+}
+
+@Composable
+private fun Tab(
+    index: MutableState<Int>,
+    editingVisibilityState: MutableTransitionState<Boolean>,
+    associationVisibilityState: MutableTransitionState<Boolean>,
+    swipeDuration: Int,
+    modifier: Modifier = Modifier,
+) {
+
     TabRow(
         selectedTabIndex = index.value,
-        modifier = modifier.padding(0.dp, 0.dp, 0.dp, 8.dp)
+        modifier = modifier.padding(0.dp, 0.dp, 0.dp, 8.dp),
+        indicator = { tabPositions ->
+            val transition = updateTransition(index.value, label = "tabSwitch")
+            val indicatorStart by transition.animateDp(
+                { Value.Animation.emphasized(swipeDuration) }, label = "tabSwitchStart"
+            ) {
+                tabPositions[it].left
+            }
+
+            val indicatorEnd by transition.animateDp(
+                { Value.Animation.emphasized(swipeDuration) }, label = "tabSwitchEnd"
+            ) {
+                tabPositions[it].right
+            }
+
+            TabIndicator(
+                Modifier
+                    .wrapContentSize(align = Alignment.BottomStart)
+                    .offset(x = indicatorStart)
+                    .width(indicatorEnd - indicatorStart)
+            )
+        }
     ) {
         Tab(
             selected = index.value == 0,
-            onClick = { index.value = 0 },
+            onClick = {
+                index.value = 0
+                editingVisibilityState.targetState = true
+                associationVisibilityState.targetState = false
+            },
             text = { Text("Edit") })
         Tab(
             selected = index.value == 1,
-            onClick = { index.value = 1 },
+            onClick = {
+                index.value = 1
+                editingVisibilityState.targetState = false
+                associationVisibilityState.targetState = true
+            },
             text = { Text("View associated notes") })
     }
 }
@@ -277,19 +354,9 @@ private fun AssociatedNoteElement(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val color: Color
-    val contentColor: Color
-    if (isSystemInDarkTheme()) {
-        color = md_theme_dark_surfaceVariant
-        contentColor = md_theme_dark_onSurfaceVariant
-    } else {
-        color = md_theme_light_surfaceVariant
-        contentColor = md_theme_light_onSurfaceVariant
-    }
-
     Surface(
-        color = color,
-        contentColor = contentColor,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
         modifier = modifier.clickable { onClick() },
     ) {
