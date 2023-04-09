@@ -101,8 +101,10 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.setOutput(stream, "UTF-8")
             serializer.startDocument("UTF-8", true)
 
+            serializer.startTag("", "data")
             notesToXml(serializer)
             noteAssociationsToXml(serializer)
+            serializer.endTag("", "data")
 
             serializer.endDocument()
         }
