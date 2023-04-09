@@ -7,15 +7,17 @@ class NoteRepository(context: Context) {
 
     private val noteDao = ApplicationDatabase.getDb(context).noteDao()
 
-    suspend fun save(note: Note) = noteDao.insert(note)
+    suspend fun insert(note: Note) = noteDao.insert(note)
 
     suspend fun update(note: Note) = noteDao.update(note)
 
     suspend fun delete(noteId: Long) = noteDao.delete(noteId) > 0
 
-    fun fetchAllNotes() = noteDao.getAll()
+    fun syncAllNotes() = noteDao.getAllNotesFlow()
 
-    fun fetchMainNotes() = noteDao.getMainNotes()
+    suspend fun getAllNotes() = noteDao.getAllNotes()
+
+    fun syncMainNotes() = noteDao.getMainNotesFlow()
 
     /**
      * Get all children of a note recursively

@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
@@ -63,6 +64,8 @@ fun NoteList(
     appState: State<NoteAppUiState>,
     fabPosition: MutableState<FabPosition>,
     deleteNotes: (List<Long>) -> Unit,
+    exportToXml: () -> Unit,
+    importFromXml: () -> Unit,
 ) {
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val deleteSelectedNote: () -> Unit = { showDeleteConfirmation.value = true }
@@ -119,7 +122,14 @@ fun NoteList(
             else FabPosition.End
 
         Scaffold(
-            topBar = { AppBar(deleteSelectedNote, deleteIconTransitionState) },
+            topBar = {
+                AppBar(
+                    deleteSelectedNote = deleteSelectedNote,
+                    deleteIconState = deleteIconTransitionState,
+                    exportToXml = exportToXml,
+                    importFromXml = importFromXml,
+                )
+            },
             floatingActionButton = {
                 Fab(navigationController, this, fabTransitionState)
             },
@@ -335,6 +345,8 @@ private fun NoteElement(
 private fun AppBar(
     deleteSelectedNote: () -> Unit,
     deleteIconState: MutableTransitionState<Boolean>,
+    exportToXml: () -> Unit,
+    importFromXml: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -347,6 +359,25 @@ private fun AppBar(
             ) {
                 IconButton(onClick = deleteSelectedNote) {
                     Icon(Icons.Filled.Delete, "Delete selected notes")
+                }
+            }
+            Row {
+                var isExpanded by rememberSaveable { mutableStateOf(false) }
+
+                IconButton(onClick = { isExpanded = true }) {
+                    Icon(Icons.Filled.MoreVert, "More options")
+
+                }
+
+                DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Export to XML") },
+                        onClick = exportToXml,
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Import from XML") },
+                        onClick = importFromXml,
+                    )
                 }
             }
         },

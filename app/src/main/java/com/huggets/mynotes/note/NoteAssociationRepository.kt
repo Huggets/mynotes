@@ -6,7 +6,10 @@ import com.huggets.mynotes.ApplicationDatabase
 class NoteAssociationRepository(context: Context) {
     private val noteAssociationDao = ApplicationDatabase.getDb(context).noteAssociationDao()
 
-    fun fetchAll() = noteAssociationDao.getAll()
+    fun syncAllAssociations() = noteAssociationDao.getAllAssociationsFlow()
 
-    suspend fun save(noteAssociation: NoteAssociation) = noteAssociationDao.insert(noteAssociation)
+    suspend fun getAllAssociations() = noteAssociationDao.getAllAssociations()
+
+    suspend fun insert(noteAssociation: NoteAssociation) =
+        noteAssociationDao.insert(noteAssociation)
 }

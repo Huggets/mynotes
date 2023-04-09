@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(note: Note): Long
 
     @Update
@@ -15,10 +15,13 @@ interface NoteDao {
     suspend fun delete(noteId: Long): Int
 
     @Query("SELECT * FROM note")
-    fun getAll(): Flow<List<Note>>
+    fun getAllNotesFlow(): Flow<List<Note>>
+
+    @Query("SELECT * FROM note")
+    suspend fun getAllNotes(): List<Note>
 
     @Query("SELECT note.id FROM note WHERE note.id NOT IN (SELECT DISTINCT child_id FROM note_association) ORDER BY note.last_edit_time DESC")
-    fun getMainNotes(): Flow<List<Long>>
+    fun getMainNotesFlow(): Flow<List<Long>>
 
     /**
      * Get all children of a note recursively

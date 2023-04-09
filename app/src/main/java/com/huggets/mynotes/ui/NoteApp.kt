@@ -39,6 +39,8 @@ private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
 @Composable
 fun NoteApp(
     quitApplication: () -> Unit,
+    exportToXml: () -> Unit,
+    importFromXml: () -> Unit,
     noteViewModel: NoteViewModel,
 ) {
     val navigationController = rememberAnimatedNavController()
@@ -79,7 +81,7 @@ fun NoteApp(
         it.arguments?.getString(Destinations.ParametersName.noteId)?.toLong() == 0L
     }
 
-    noteViewModel.fetchUiState()
+    noteViewModel.syncUiState()
 
     AppTheme {
         Surface {
@@ -115,6 +117,8 @@ fun NoteApp(
                         appState,
                         fabPosition,
                         deleteNotes,
+                        exportToXml,
+                        importFromXml,
                     )
                 }
                 composable(
