@@ -18,11 +18,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.theme.*
 import java.util.*
@@ -127,13 +130,19 @@ fun NoteEditing(
         )
 
         Scaffold(
-            topBar = { AppBar(onDelete = onDelete, onSave = onSave, onBack = onBack) },
+            topBar = {
+                AppBar(
+                    onDelete = onDelete,
+                    onSave = onSave,
+                    onBack = onBack,
+                    title = title,
+                )
+            },
         ) { paddingValues ->
             Column(
                 Modifier
                     .padding(paddingValues)
                     .fillMaxWidth()
-                    .padding(Value.smallPadding)
             ) {
                 val index = rememberSaveable { mutableStateOf(0) }
 
@@ -156,6 +165,7 @@ fun NoteEditing(
                     editingVisibilityState = editingVisibilityState,
                     associationVisibilityState = associationVisibilityState,
                     swipeDuration = swipeDuration,
+                    modifier = Modifier.padding(Value.smallPadding, 0.dp),
                 )
 
                 Box {
@@ -164,8 +174,21 @@ fun NoteEditing(
                         enter = swipeInRightTransition,
                         exit = swipeOutLeftTransition,
                     ) {
-                        Editing(title, content)
+                        val colors = TextFieldDefaults.textFieldColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        )
+
+                        TextField(
+                            value = content.value,
+                            onValueChange = { content.value = it },
+                            colors = colors,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
+
                     this@Column.AnimatedVisibility(
                         visibleState = associationVisibilityState,
                         enter = swipeInLeftTransition,
@@ -185,6 +208,7 @@ fun NoteEditing(
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
                             navigationController = navigationController,
+                            modifier = Modifier.padding(Value.smallPadding)
                         )
                     }
                 }
@@ -213,13 +237,13 @@ private fun Tab(
     index: MutableState<Int>,
     editingVisibilityState: MutableTransitionState<Boolean>,
     associationVisibilityState: MutableTransitionState<Boolean>,
-    swipeDuration: Int,
+    @Suppress("SameParameterValue") swipeDuration: Int,
     modifier: Modifier = Modifier,
 ) {
 
     TabRow(
         selectedTabIndex = index.value,
-        modifier = modifier.padding(0.dp, 0.dp, 0.dp, 8.dp),
+        modifier = modifier,
         indicator = { tabPositions ->
             val transition = updateTransition(index.value, label = "tabSwitch")
             val indicatorStart by transition.animateDp(
@@ -258,36 +282,6 @@ private fun Tab(
                 associationVisibilityState.targetState = true
             },
             text = { Text("View associated notes") })
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun Editing(
-    title: MutableState<String>,
-    content: MutableState<String>,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier) {
-        OutlinedTextField(
-            value = title.value,
-            onValueChange = { title.value = it },
-            singleLine = true,
-            label = {
-                Text("Title")
-            },
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = content.value,
-            onValueChange = { content.value = it },
-            label = {
-                Text("Content")
-            },
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
@@ -366,16 +360,34 @@ private fun AssociatedNoteElement(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 private fun AppBar(
     onDelete: () -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
+    title: MutableState<String>,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
-        title = { Text("Edit note") },
+        title = {
+            val colors = TextFieldDefaults.textFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            )
+
+            TextField(
+                value = title.value,
+                onValueChange = { title.value = it },
+                singleLine = true,
+                colors = colors,
+                placeholder = {
+                    Text("No Title", fontSize = 24.sp)
+                },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            )
+        },
         actions = {
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, "Delete note")
