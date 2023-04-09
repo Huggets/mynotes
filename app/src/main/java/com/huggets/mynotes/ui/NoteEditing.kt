@@ -18,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.*
@@ -43,7 +42,6 @@ fun NoteEditing(
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
-    val showTitleEmptyDialog = rememberSaveable { mutableStateOf(false) }
 
     val isNewNote = noteId == 0L
 
@@ -85,19 +83,15 @@ fun NoteEditing(
         val title = rememberSaveable { mutableStateOf(note.title) }
         val content = rememberSaveable { mutableStateOf(note.content) }
         val onSave: () -> Unit = {
-            if (title.value.isBlank()) {
-                showTitleEmptyDialog.value = true
-            } else {
-                saveNote(
-                    NoteItemUiState(
-                        note.id,
-                        title.value,
-                        content.value,
-                        NoteItemUiState.getCurrentEditTime()
-                    ), parentNoteId
-                )
-                navigationController.popBackStack()
-            }
+            saveNote(
+                NoteItemUiState(
+                    note.id,
+                    title.value,
+                    content.value,
+                    NoteItemUiState.getCurrentEditTime()
+                ), parentNoteId
+            )
+            navigationController.popBackStack()
         }
         val onDelete: () -> Unit = {
             showDeleteConfirmation.value = true
@@ -123,10 +117,6 @@ fun NoteEditing(
                 navigationController.popBackStack()
             },
             confirmationMessage = "Cancel changes?",
-        )
-        AlertDialog(
-            displayDialog = showTitleEmptyDialog,
-            message = "Title cannot be empty!",
         )
 
         Scaffold(
@@ -355,12 +345,12 @@ private fun AssociatedNoteElement(
         modifier = modifier.clickable { onClick() },
     ) {
         Row(modifier = Modifier.padding(Value.smallPadding)) {
-            Text(text, fontWeight = FontWeight.Bold)
+            Text(text.ifBlank { "No title" }, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar(
     onDelete: () -> Unit,
@@ -383,7 +373,7 @@ private fun AppBar(
                 singleLine = true,
                 colors = colors,
                 placeholder = {
-                    Text("No Title", fontSize = 24.sp)
+                    Text("No title", fontSize = 24.sp)
                 },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )

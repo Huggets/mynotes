@@ -314,7 +314,7 @@ private fun NoteElement(
                 val content = shortened(note.content, 5f, density, boxWidth, 16.sp)
 
                 Text(
-                    text = title,
+                    text = title.ifBlank { "No title" },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                 )
