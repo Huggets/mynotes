@@ -20,8 +20,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -292,9 +290,6 @@ private fun NoteElement(
         shape = ShapeDefaults.Small,
         modifier = modifier.padding(Value.smallPadding, 0.dp),
     ) {
-        var boxWidth by remember { mutableStateOf(0.dp) }
-        val density = LocalDensity.current
-
         val selectionState = remember { MutableTransitionState(isSelected == true) }
         selectionState.targetState = isSelected == true
 
@@ -302,25 +297,21 @@ private fun NoteElement(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(onClick = { onClick(note.id) },
-                    onLongClick = { onLongClick(note.id) })
-                .onGloballyPositioned {
-                    boxWidth = with(density) { it.size.width.toDp() }
-                },
+                    onLongClick = { onLongClick(note.id) }),
         ) {
             Column(
                 modifier = Modifier.padding(Value.smallPadding)
             ) {
-                val title = shortened(note.title, 1f, density, boxWidth, 16.sp)
-                val content = shortened(note.content, 5f, density, boxWidth, 16.sp)
-
                 Text(
-                    text = title.ifBlank { "No title" },
+                    text = note.title.ifBlank { "No title" },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 2,
                 )
                 Text(
-                    text = content,
+                    text = note.content,
                     fontSize = 16.sp,
+                    maxLines = 5,
                 )
             }
             AnimatedVisibility(

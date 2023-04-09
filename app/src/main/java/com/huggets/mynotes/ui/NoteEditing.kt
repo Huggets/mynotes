@@ -27,7 +27,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.huggets.mynotes.shortened
 import com.huggets.mynotes.theme.*
 import java.util.*
 
@@ -357,15 +356,10 @@ private fun AssociatedNoteElement(
             val fontSize = 16.sp
 
             Text(
-                text = shortened(
-                    text.ifBlank { "No title" },
-                    1.5f,
-                    density,
-                    surfaceWidth,
-                    fontSize
-                ),
+                text = text.ifBlank { "No title" },
                 fontWeight = FontWeight.Bold,
                 fontSize = fontSize,
+                maxLines = 2,
             )
         }
     }
