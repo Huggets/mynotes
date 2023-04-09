@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         val createDocument =
             registerForActivityResult(ActivityResultContracts.CreateDocument("text/xml")) {
                 if (it != null) {
-                    applicationContext.contentResolver.openOutputStream(it)?.let { stream ->
+                    applicationContext.contentResolver.openOutputStream(it, "wt")?.let { stream ->
                         noteViewModel.exportToXml(stream)
                     }
                 }
