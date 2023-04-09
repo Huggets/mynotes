@@ -20,12 +20,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.huggets.mynotes.shortened
 import com.huggets.mynotes.theme.*
 import java.util.*
 
@@ -338,14 +340,33 @@ private fun AssociatedNoteElement(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
+    var surfaceWidth by remember { mutableStateOf(0.dp) }
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
-        modifier = modifier.clickable { onClick() },
+        modifier = modifier
+            .clickable { onClick() }
+            .onGloballyPositioned {
+                surfaceWidth = with(density) { it.size.width.toDp() }
+            },
     ) {
         Row(modifier = Modifier.padding(Value.smallPadding)) {
-            Text(text.ifBlank { "No title" }, fontWeight = FontWeight.Bold)
+            val fontSize = 16.sp
+
+            Text(
+                text = shortened(
+                    text.ifBlank { "No title" },
+                    1.5f,
+                    density,
+                    surfaceWidth,
+                    fontSize
+                ),
+                fontWeight = FontWeight.Bold,
+                fontSize = fontSize,
+            )
         }
     }
 }
