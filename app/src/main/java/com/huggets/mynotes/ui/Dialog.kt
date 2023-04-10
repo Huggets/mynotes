@@ -35,19 +35,3 @@ fun ConfirmationDialog(
         )
     }
 }
-
-@Composable
-fun AlertDialog(
-    displayDialog: MutableState<Boolean>,
-    message: String,
-    modifier: Modifier = Modifier,
-) {
-    if (displayDialog.value) {
-        AlertDialog(
-            onDismissRequest = { displayDialog.value = false },
-            confirmButton = { Button(onClick = { displayDialog.value = false }) { Text("Ok") } },
-            text = { Text(message) },
-            modifier = modifier
-        )
-    }
-}
