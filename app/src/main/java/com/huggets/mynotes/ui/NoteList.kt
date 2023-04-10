@@ -27,13 +27,16 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
 import com.huggets.mynotes.theme.*
+import com.huggets.mynotes.ui.state.NoteAppUiState
+import com.huggets.mynotes.ui.state.NoteItemUiState
+import com.huggets.mynotes.ui.state.find
 
 private val emphasizedFloat = Value.Animation.emphasized<Float>()
-private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(save = {
+private val saver = Saver<SnapshotStateMap<String, Boolean>, String>(save = {
     val builder = StringBuilder()
-    for ((id, value) in it) {
-        builder.append(id)
-        builder.append(':')
+    for ((creationDate, value) in it) {
+        builder.append(creationDate)
+        builder.append("@")
         builder.append(value)
         builder.append(';')
     }
@@ -42,12 +45,12 @@ private val saver = Saver<SnapshotStateMap<Long, Boolean>, String>(save = {
     }
     builder.toString()
 }, restore = {
-    val map = SnapshotStateMap<Long, Boolean>()
+    val map = SnapshotStateMap<String, Boolean>()
     val items = it.split(';')
     if (items[0] != "") {
         for (item in items) {
-            val (id, value) = item.split(':')
-            map[id.toLong()] = value.toBoolean()
+            val (creationDate, value) = item.split('@')
+            map[creationDate] = value.toBoolean()
         }
     }
 
@@ -61,7 +64,7 @@ fun NoteList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     fabPosition: MutableState<FabPosition>,
-    deleteNotes: (List<Long>) -> Unit,
+    deleteNotes: (List<String>) -> Unit,
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
 ) {
@@ -89,8 +92,8 @@ fun NoteList(
                     selectionMode.value = false
                     selectedCount.value = 0
 
-                    for (noteId in isNoteSelected.keys) {
-                        isNoteSelected[noteId] = false
+                    for (noteCreationDate in isNoteSelected.keys) {
+                        isNoteSelected[noteCreationDate] = false
                     }
                 } else {
                     val navigationFailed = !navigationController.navigateUp()
@@ -149,12 +152,12 @@ fun NoteList(
                     selectedCount.value = 0
                     selectionMode.value = false
 
-                    val toDelete = mutableListOf<Long>()
+                    val toDelete = mutableListOf<String>()
 
-                    for ((noteId, isSelected) in isNoteSelected.entries) {
+                    for ((noteCreationDate, isSelected) in isNoteSelected.entries) {
                         if (isSelected) {
-                            toDelete.add(noteId)
-                            isNoteSelected[noteId] = false // Unselect the note
+                            toDelete.add(noteCreationDate)
+                            isNoteSelected[noteCreationDate] = false // Unselect the note
                         }
                     }
 
@@ -170,39 +173,44 @@ private fun NoteElementList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     selectionMode: MutableState<Boolean>,
-    isNoteSelected: SnapshotStateMap<Long, Boolean>,
+    isNoteSelected: SnapshotStateMap<String, Boolean>,
     selectedCount: MutableState<Int>,
     fabTransitionState: MutableTransitionState<Boolean>,
     fabWasShown: MutableState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
-    val onClick: (Long) -> Unit = { id ->
+    val onClick: (String) -> Unit = { creationDate ->
         if (selectionMode.value) {
-            if (isNoteSelected[id] != true) {
-                isNoteSelected[id] = true
+            if (isNoteSelected[creationDate] != true) {
+                isNoteSelected[creationDate] = true
                 selectedCount.value++
             } else {
-                isNoteSelected[id] = false
+                isNoteSelected[creationDate] = false
                 selectedCount.value--
                 if (selectedCount.value == 0) {
                     selectionMode.value = false
                 }
             }
         } else {
-            navigationController.navigate(Destinations.generateEditNoteDestination(id))
+            navigationController.navigate(
+                Destinations.generateEditNoteDestination(
+                    creationDate,
+                    null
+                )
+            )
         }
     }
-    val onLongClick: (Long) -> Unit = { id ->
+    val onLongClick: (String) -> Unit = { creationDate ->
         selectionMode.value = true
 
-        if (isNoteSelected[id] != true) {
+        if (isNoteSelected[creationDate] != true) {
             // If not already selected
-            isNoteSelected[id] = true
+            isNoteSelected[creationDate] = true
             selectedCount.value++
         }
     }
 
-    if (appState.value.mainNoteIds.isEmpty()) {
+    if (appState.value.mainNoteCreationDates.isEmpty()) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -250,14 +258,14 @@ private fun NoteElementList(
                         .fillMaxWidth()
                 )
             }
-            for (mainNoteId in appState.value.mainNoteIds) {
-                item(key = mainNoteId) {
-                    val note = appState.value.allNotes.find(mainNoteId)
+            for (mainNoteCreationDate in appState.value.mainNoteCreationDates) {
+                item(key = mainNoteCreationDate) {
+                    val note = appState.value.allNotes.find(mainNoteCreationDate)
 
                     if (note != null) {
                         NoteElement(
                             note,
-                            isNoteSelected[note.id],
+                            isNoteSelected[note.creationDate],
                             onClick,
                             onLongClick,
                         )
@@ -280,8 +288,8 @@ private fun NoteElementList(
 private fun NoteElement(
     note: NoteItemUiState,
     isSelected: Boolean?,
-    onClick: (Long) -> Unit,
-    onLongClick: (Long) -> Unit,
+    onClick: (String) -> Unit,
+    onLongClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -296,8 +304,8 @@ private fun NoteElement(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = { onClick(note.id) },
-                    onLongClick = { onLongClick(note.id) }),
+                .combinedClickable(onClick = { onClick(note.creationDate) },
+                    onLongClick = { onLongClick(note.creationDate) }),
         ) {
             Column(
                 modifier = Modifier.padding(Value.smallPadding)
@@ -385,7 +393,7 @@ private fun Fab(
 ) {
     val openNewNote: () -> Unit = {
         navigationController.navigate(
-            Destinations.generateEditNoteDestination(0)
+            Destinations.generateEditNoteDestination(null, null)
         )
     }
     val label = "Add a new note"

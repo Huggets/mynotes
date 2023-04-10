@@ -8,26 +8,26 @@ import androidx.room.ForeignKey
 
 @Entity(
     tableName = "note_association",
-    primaryKeys = ["parent_id", "child_id"],
+    primaryKeys = ["parent_creation_date", "child_creation_date"],
     foreignKeys = [
         ForeignKey(
             entity = Note::class,
-            parentColumns = ["id"],
-            childColumns = ["parent_id"],
+            parentColumns = ["creation_date"],
+            childColumns = ["parent_creation_date"],
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = Note::class,
-            parentColumns = ["id"],
-            childColumns = ["child_id"],
+            parentColumns = ["creation_date"],
+            childColumns = ["child_creation_date"],
             onDelete = ForeignKey.CASCADE,
         ),
     ],
 )
 data class NoteAssociation(
-    @ColumnInfo(name = "parent_id")
-    var parentId: Long,
+    @ColumnInfo(name = "parent_creation_date")
+    var parentCreationDate: String,
 
-    @ColumnInfo(name = "child_id")
-    var childId: Long,
+    @ColumnInfo(name = "child_creation_date")
+    var childCreationDate: String,
 )

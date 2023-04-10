@@ -2,14 +2,16 @@ package com.huggets.mynotes.note
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-@Entity(tableName = "note")
+@Entity(
+    tableName = "note",
+    primaryKeys = ["creation_date"],
+)
 data class Note(
-    @PrimaryKey(autoGenerate = true)
-    var id: Long,
     var title: String,
     var content: String,
+    @ColumnInfo(name = "creation_date")
+    var creationDate: String,
     @ColumnInfo(name = "last_edit_time")
     var lastEditTime: String,
 )

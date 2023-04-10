@@ -21,6 +21,7 @@ import com.huggets.mynotes.note.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
 import com.huggets.mynotes.ui.Value.Animation
 import com.huggets.mynotes.ui.Value.Animation.slideOffset
+import com.huggets.mynotes.ui.state.NoteItemUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
@@ -78,8 +79,63 @@ fun NoteApp(
         ) + slideOut { IntOffset(it.width, it.height) })
 
     val isNewNote: (NavBackStackEntry) -> Boolean = {
-        it.arguments?.getString(Destinations.ParametersName.noteId)?.toLong() == 0L
+        it.destination.route == Destinations.newNoteRoute
     }
+
+    val viewListPopEnterTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+        {
+            if (isNewNote(initialState)) {
+                null
+            } else {
+                enterScreenFromLeft
+            }
+        }
+    val viewListExitTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+        {
+            if (isNewNote(targetState)) {
+                null
+            } else {
+                leaveScreenToLeft
+            }
+        }
+
+    val editNoteEnterTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+        {
+            if (this.initialState.destination.route == Destinations.viewNoteListRoute &&
+                isNewNote(targetState)
+            ) {
+                if (fabPosition.value == FabPosition.Center) {
+                    inNewNoteCenter
+                } else {
+                    inNewNoteRight
+                }
+
+            } else {
+                enterScreenFromRight
+            }
+        }
+    val editNoteExitTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+        {
+            leaveScreenToLeft
+        }
+    val editNotePopEnterTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+        {
+            enterScreenFromLeft
+        }
+    val editNotePopExitTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+        {
+            if (targetState.destination.route == Destinations.viewNoteListRoute &&
+                isNewNote(initialState)
+            ) {
+                if (fabPosition.value == FabPosition.Center) {
+                    outNewNoteCenter
+                } else {
+                    outNewNoteRight
+                }
+            } else {
+                leaveScreenToRight
+            }
+        }
 
     noteViewModel.syncUiState()
 
@@ -91,24 +147,12 @@ fun NoteApp(
             ) {
                 composable(
                     Destinations.viewNoteListRoute,
-                    popEnterTransition = {
-                        if (isNewNote(initialState)) {
-                            null
-                        } else {
-                            enterScreenFromLeft
-                        }
-                    },
-                    exitTransition = {
-                        if (isNewNote(targetState)) {
-                            null
-                        } else {
-                            leaveScreenToLeft
-                        }
-                    },
+                    popEnterTransition = viewListPopEnterTransition,
+                    exitTransition = viewListExitTransition,
                 ) {
-                    val deleteNotes: (List<Long>) -> Unit = { noteIds ->
-                        for (id in noteIds) {
-                            noteViewModel.deleteNote(id)
+                    val deleteNotes: (List<String>) -> Unit = { noteCreationDates ->
+                        for (creationDate in noteCreationDates) {
+                            noteViewModel.deleteNote(creationDate)
                         }
                     }
                     NoteList(
@@ -123,58 +167,52 @@ fun NoteApp(
                 }
                 composable(
                     Destinations.editNoteRoute,
-                    enterTransition = {
-                        if (this.initialState.destination.route == Destinations.viewNoteListRoute &&
-                            isNewNote(targetState)
-                        ) {
-                            if (fabPosition.value == FabPosition.Center) {
-                                inNewNoteCenter
-                            } else {
-                                inNewNoteRight
-                            }
-
-                        } else {
-                            enterScreenFromRight
-                        }
-                    },
-                    popExitTransition = {
-                        if (targetState.destination.route == Destinations.viewNoteListRoute &&
-                            isNewNote(initialState)
-                        ) {
-                            if (fabPosition.value == FabPosition.Center) {
-                                outNewNoteCenter
-                            } else {
-                                outNewNoteRight
-                            }
-                        } else {
-                            leaveScreenToRight
-                        }
-                    },
-                    popEnterTransition = {
-                        enterScreenFromLeft
-                    },
-                    exitTransition = {
-                        leaveScreenToLeft
-                    },
+                    enterTransition = editNoteEnterTransition,
+                    exitTransition = editNoteExitTransition,
+                    popExitTransition = editNotePopExitTransition,
+                    popEnterTransition = editNotePopEnterTransition,
                 ) { backStackEntry ->
-                    val noteId =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
-                            .toLong()
-                    val parentNoteId =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteId)!!
-                            .toLong()
-                    val saveNote: (NoteItemUiState, Long) -> Unit = { note, parentId ->
-                        noteViewModel.saveNote(note, parentId)
+                    val noteCreationDate =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteCreationDate)!!
+                    val parentCreationDate =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteCreationDate)
+                    val saveNote: (NoteItemUiState, String?) -> Unit = { note, _ ->
+                        noteViewModel.updateNote(note)
                     }
-                    val deleteNote: (Long) -> Unit = {
+                    val deleteNote: (String) -> Unit = {
                         noteViewModel.deleteNote(it)
                     }
 
                     NoteEditing(
                         navigationController,
                         appState,
-                        noteId,
-                        parentNoteId,
+                        noteCreationDate,
+                        parentCreationDate,
+                        saveNote,
+                        deleteNote,
+                    )
+                }
+                composable(
+                    Destinations.newNoteRoute,
+                    enterTransition = editNoteEnterTransition,
+                    exitTransition = editNoteExitTransition,
+                    popExitTransition = editNotePopExitTransition,
+                    popEnterTransition = editNotePopEnterTransition,
+                ) { backStackEntry ->
+                    val parentCreationDate =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteCreationDate)
+                    val saveNote: (NoteItemUiState, String?) -> Unit = { note, parent ->
+                        noteViewModel.createNote(note, parent)
+                    }
+                    val deleteNote: (String) -> Unit = {
+                        noteViewModel.deleteNote(it)
+                    }
+
+                    NoteEditing(
+                        navigationController,
+                        appState,
+                        null,
+                        parentCreationDate,
                         saveNote,
                         deleteNote,
                     )

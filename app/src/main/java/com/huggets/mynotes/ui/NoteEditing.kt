@@ -28,6 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.theme.*
+import com.huggets.mynotes.ui.state.NoteAppUiState
+import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
+import com.huggets.mynotes.ui.state.NoteItemUiState
+import com.huggets.mynotes.ui.state.find
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,16 +39,16 @@ import java.util.*
 fun NoteEditing(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    noteId: Long,
-    parentNoteId: Long,
-    saveNote: (NoteItemUiState, Long) -> Unit,
-    deleteNote: (noteId: Long) -> Unit,
+    noteCreationDate: String?,
+    parentNoteCreationDate: String?,
+    saveNote: (NoteItemUiState, String?) -> Unit,
+    deleteNote: (String) -> Unit,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
-    val isNewNote = noteId == 0L
+    val isNewNote = noteCreationDate == null
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
@@ -74,11 +78,12 @@ fun NoteEditing(
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
     } else {
+        val currentTime = NoteItemUiState.getCurrentEditTime()
         val note = if (isNewNote) {
-            NoteItemUiState(0, "", "", NoteItemUiState.getCurrentEditTime())
+            NoteItemUiState("", "", currentTime, currentTime)
         } else {
-            appState.value.allNotes.find(noteId)
-                ?: throw NoSuchElementException("Note with id=$noteId not found")
+            appState.value.allNotes.find(noteCreationDate!!)
+                ?: throw NoSuchElementException("Note with creationDate=$noteCreationDate not found")
         }
 
         val title = rememberSaveable { mutableStateOf(note.title) }
@@ -86,11 +91,11 @@ fun NoteEditing(
         val onSave: () -> Unit = {
             saveNote(
                 NoteItemUiState(
-                    note.id,
                     title.value,
                     content.value,
+                    note.creationDate,
                     NoteItemUiState.getCurrentEditTime()
-                ), parentNoteId
+                ), parentNoteCreationDate
             )
             navigationController.popBackStack()
         }
@@ -105,7 +110,7 @@ fun NoteEditing(
             displayDialog = showDeleteConfirmation,
             onConfirmation = {
                 if (!isNewNote) {
-                    deleteNote(noteId)
+                    deleteNote(note.creationDate)
                     isDeleted = true
                 }
                 navigationController.popBackStack()
@@ -189,13 +194,13 @@ fun NoteEditing(
                             mutableListOf()
 
                         appState.value.noteAssociations.forEach {
-                            if (it.parentId == noteId) {
+                            if (it.parentCreationDate == note.creationDate) {
                                 associatedNotes += it
                             }
                         }
 
                         AssociatedNotes(
-                            parentNoteId = noteId,
+                            parentCreationDate = noteCreationDate,
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
                             navigationController = navigationController,
@@ -278,13 +283,13 @@ private fun Tab(
 
 @Composable
 private fun AssociatedNotes(
-    parentNoteId: Long,
+    parentCreationDate: String?,
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
     navigationController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
-    val parentExists = parentNoteId != 0L
+    val parentExists = parentCreationDate != null
 
     LazyColumn(modifier) {
         item(0) {
@@ -292,7 +297,7 @@ private fun AssociatedNotes(
                 onClick = {
                     // Create a new note
                     navigationController.navigate(
-                        Destinations.generateEditNoteDestination(parentId = parentNoteId)
+                        Destinations.generateEditNoteDestination(null, parentCreationDate)
                     )
                 },
                 shape = ShapeDefaults.Small,
@@ -309,25 +314,21 @@ private fun AssociatedNotes(
             }
         }
         for (associatedNote in associatedNotes) {
-            val note = notes.find(associatedNote.childId).let {
-                it ?: throw NoSuchElementException(
-                    "Note with id=${associatedNote.childId} not found"
-                )
-            }
-
-            item(associatedNote.childId) {
-                AssociatedNoteElement(
-                    text = note.title,
-                    onClick = {
-                        // Open the note
-                        navigationController.navigate(
-                            Destinations.generateEditNoteDestination(note.id)
-                        )
-                    },
-                    modifier = Modifier
-                        .padding(0.dp, 0.dp, 0.dp, 8.dp)
-                        .fillMaxWidth(),
-                )
+            notes.find(associatedNote.childCreationDate)?.let { note ->
+                item(associatedNote.childCreationDate) {
+                    AssociatedNoteElement(
+                        text = note.title,
+                        onClick = {
+                            // Open the note
+                            navigationController.navigate(
+                                Destinations.generateEditNoteDestination(note.creationDate, null)
+                            )
+                        },
+                        modifier = Modifier
+                            .padding(0.dp, 0.dp, 0.dp, 8.dp)
+                            .fillMaxWidth(),
+                    )
+                }
             }
         }
     }
