@@ -11,7 +11,7 @@ data class Note(
     var title: String,
     var content: String,
     @ColumnInfo(name = "creation_date")
-    var creationDate: String,
+    var creationDate: Date,
     @ColumnInfo(name = "last_edit_time")
-    var lastEditTime: String,
+    var lastEditTime: Date,
 )

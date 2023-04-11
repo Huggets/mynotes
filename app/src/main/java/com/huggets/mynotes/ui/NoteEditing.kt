@@ -27,22 +27,22 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.find
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditing(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    noteCreationDate: String?,
-    parentNoteCreationDate: String?,
-    saveNote: (NoteItemUiState, String?) -> Unit,
-    deleteNote: (String) -> Unit,
+    noteCreationDate: Date?,
+    parentNoteCreationDate: Date?,
+    saveNote: (NoteItemUiState, Date?) -> Unit,
+    deleteNote: (Date) -> Unit,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
@@ -78,7 +78,7 @@ fun NoteEditing(
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
     } else {
-        val currentTime = NoteItemUiState.getCurrentEditTime()
+        val currentTime = Date.getCurrentTime()
         val note = if (isNewNote) {
             NoteItemUiState("", "", currentTime, currentTime)
         } else {
@@ -94,7 +94,7 @@ fun NoteEditing(
                     title.value,
                     content.value,
                     note.creationDate,
-                    NoteItemUiState.getCurrentEditTime()
+                    Date.getCurrentTime(),
                 ), parentNoteCreationDate
             )
             navigationController.popBackStack()
@@ -283,7 +283,7 @@ private fun Tab(
 
 @Composable
 private fun AssociatedNotes(
-    parentCreationDate: String?,
+    parentCreationDate: Date?,
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
     navigationController: NavHostController,
@@ -291,6 +291,7 @@ private fun AssociatedNotes(
 ) {
     val parentExists = parentCreationDate != null
 
+    // TODO Use vertical arrangement instead of padding
     LazyColumn(modifier) {
         item(0) {
             Button(
@@ -315,7 +316,7 @@ private fun AssociatedNotes(
         }
         for (associatedNote in associatedNotes) {
             notes.find(associatedNote.childCreationDate)?.let { note ->
-                item(associatedNote.childCreationDate) {
+                item(associatedNote.childCreationDate.hashCode()) {
                     AssociatedNoteElement(
                         text = note.title,
                         onClick = {

@@ -42,7 +42,7 @@ class NoteViewModel(context: Context) : ViewModel() {
 
         viewModelScope.launch {
             noteRepository.syncMainNotes().collect {
-                val list = mutableListOf<String>()
+                val list = mutableListOf<Date>()
 
                 it.forEach { creationDate ->
                     list.add(creationDate)
@@ -81,14 +81,14 @@ class NoteViewModel(context: Context) : ViewModel() {
      *
      * If a parent note id is not null, the note will be associated with this parent note.
      */
-    fun createNote(note: NoteItemUiState, parentNoteCreationDate: String?) {
+    fun createNote(note: NoteItemUiState, parentNoteCreationDate: Date?) {
         viewModelScope.launch {
             noteRepository.insert(note.toNote())
             associateNote(note, parentNoteCreationDate)
         }
     }
 
-    private suspend fun associateNote(note: NoteItemUiState, parentNoteCreationDate: String?) {
+    private suspend fun associateNote(note: NoteItemUiState, parentNoteCreationDate: Date?) {
         if (parentNoteCreationDate != null) {
             noteAssociationRepository.insert(
                 NoteAssociationItemUiState(
@@ -102,7 +102,7 @@ class NoteViewModel(context: Context) : ViewModel() {
     /**
      * Deletes a note and all its children
      */
-    fun deleteNote(creationDate: String) {
+    fun deleteNote(creationDate: Date) {
         viewModelScope.launch {
             noteRepository.getChildren(creationDate).forEach { child ->
                 noteRepository.delete(child.creationDate)
@@ -133,8 +133,8 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.startTag("", "note")
             serializer.attribute("", "title", note.title)
             serializer.attribute("", "content", note.content)
-            serializer.attribute("", "creationDate", note.creationDate)
-            serializer.attribute("", "lastEditTime", note.lastEditTime)
+            serializer.attribute("", "creationDate", note.creationDate.toString())
+            serializer.attribute("", "lastEditTime", note.lastEditTime.toString())
             serializer.endTag("", "note")
         }
 
@@ -146,8 +146,16 @@ class NoteViewModel(context: Context) : ViewModel() {
 
         noteAssociationRepository.getAllAssociations().forEach { noteAssociation ->
             serializer.startTag("", "noteAssociation")
-            serializer.attribute("", "parentCreationDate", noteAssociation.parentCreationDate)
-            serializer.attribute("", "childCreationDate", noteAssociation.childCreationDate)
+            serializer.attribute(
+                "",
+                "parentCreationDate",
+                noteAssociation.parentCreationDate.toString()
+            )
+            serializer.attribute(
+                "",
+                "childCreationDate",
+                noteAssociation.childCreationDate.toString()
+            )
             serializer.endTag("", "noteAssociation")
         }
 
@@ -166,17 +174,23 @@ class NoteViewModel(context: Context) : ViewModel() {
                         "note" -> {
                             val title = parser.getAttributeValue("", "title")
                             val content = parser.getAttributeValue("", "content")
-                            val creationDate = parser.getAttributeValue("", "creationDate")
-                            val lastEditTime = parser.getAttributeValue("", "lastEditTime")
+                            val creationDate = Date.fromString(
+                                parser.getAttributeValue("", "creationDate")
+                            )
+                            val lastEditTime = Date.fromString(
+                                parser.getAttributeValue("", "lastEditTime")
+                            )
 
                             val note = NoteItemUiState(title, content, creationDate, lastEditTime)
                             noteRepository.insert(note.toNote())
                         }
                         "noteAssociation" -> {
-                            val parentCreationDate =
+                            val parentCreationDate = Date.fromString(
                                 parser.getAttributeValue("", "parentCreationDate")
-                            val childCreationDate =
+                            )
+                            val childCreationDate = Date.fromString(
                                 parser.getAttributeValue("", "childCreationDate")
+                            )
 
                             val noteAssociation =
                                 NoteAssociationItemUiState(

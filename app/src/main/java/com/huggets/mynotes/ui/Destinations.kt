@@ -1,5 +1,7 @@
 package com.huggets.mynotes.ui
 
+import com.huggets.mynotes.data.Date
+
 object Destinations {
     object ParametersName {
         const val noteCreationDate = "noteCreationDate"
@@ -29,8 +31,8 @@ object Destinations {
      * otherwise it will be associated to another the parent note.
      */
     fun generateEditNoteDestination(
-        noteCreationDate: String?,
-        parentCreationDate: String?
+        noteCreationDate: Date?,
+        parentCreationDate: Date?
     ): String {
         val parent: String? =
             if (parentCreationDate == null) null

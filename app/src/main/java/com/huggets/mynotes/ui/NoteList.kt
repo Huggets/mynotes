@@ -26,13 +26,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
+import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.find
 
 private val emphasizedFloat = Value.Animation.emphasized<Float>()
-private val saver = Saver<SnapshotStateMap<String, Boolean>, String>(save = {
+private val saver = Saver<SnapshotStateMap<Date, Boolean>, String>(save = {
     val builder = StringBuilder()
     for ((creationDate, value) in it) {
         builder.append(creationDate)
@@ -45,11 +46,12 @@ private val saver = Saver<SnapshotStateMap<String, Boolean>, String>(save = {
     }
     builder.toString()
 }, restore = {
-    val map = SnapshotStateMap<String, Boolean>()
+    val map = SnapshotStateMap<Date, Boolean>()
     val items = it.split(';')
     if (items[0] != "") {
         for (item in items) {
-            val (creationDate, value) = item.split('@')
+            val (creationDateString, value) = item.split('@')
+            val creationDate = Date.fromString(creationDateString)
             map[creationDate] = value.toBoolean()
         }
     }
@@ -64,7 +66,7 @@ fun NoteList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     fabPosition: MutableState<FabPosition>,
-    deleteNotes: (List<String>) -> Unit,
+    deleteNotes: (List<Date>) -> Unit,
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
 ) {
@@ -152,7 +154,7 @@ fun NoteList(
                     selectedCount.value = 0
                     selectionMode.value = false
 
-                    val toDelete = mutableListOf<String>()
+                    val toDelete = mutableListOf<Date>()
 
                     for ((noteCreationDate, isSelected) in isNoteSelected.entries) {
                         if (isSelected) {
@@ -173,13 +175,13 @@ private fun NoteElementList(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     selectionMode: MutableState<Boolean>,
-    isNoteSelected: SnapshotStateMap<String, Boolean>,
+    isNoteSelected: SnapshotStateMap<Date, Boolean>,
     selectedCount: MutableState<Int>,
     fabTransitionState: MutableTransitionState<Boolean>,
     fabWasShown: MutableState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
-    val onClick: (String) -> Unit = { creationDate ->
+    val onClick: (Date) -> Unit = { creationDate ->
         if (selectionMode.value) {
             if (isNoteSelected[creationDate] != true) {
                 isNoteSelected[creationDate] = true
@@ -200,7 +202,7 @@ private fun NoteElementList(
             )
         }
     }
-    val onLongClick: (String) -> Unit = { creationDate ->
+    val onLongClick: (Date) -> Unit = { creationDate ->
         selectionMode.value = true
 
         if (isNoteSelected[creationDate] != true) {
@@ -259,7 +261,7 @@ private fun NoteElementList(
                 )
             }
             for (mainNoteCreationDate in appState.value.mainNoteCreationDates) {
-                item(key = mainNoteCreationDate) {
+                item(key = mainNoteCreationDate.hashCode()) {
                     val note = appState.value.allNotes.find(mainNoteCreationDate)
 
                     if (note != null) {
@@ -288,8 +290,8 @@ private fun NoteElementList(
 private fun NoteElement(
     note: NoteItemUiState,
     isSelected: Boolean?,
-    onClick: (String) -> Unit,
-    onLongClick: (String) -> Unit,
+    onClick: (Date) -> Unit,
+    onLongClick: (Date) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(

@@ -12,7 +12,7 @@ interface NoteDao {
     suspend fun update(note: Note)
 
     @Query("DELETE FROM note WHERE creation_date = :creationDate")
-    suspend fun delete(creationDate: String): Int
+    suspend fun delete(creationDate: Date): Int
 
     @Query("SELECT * FROM note")
     fun getAllNotesFlow(): Flow<List<Note>>
@@ -21,7 +21,7 @@ interface NoteDao {
     suspend fun getAllNotes(): List<Note>
 
     @Query("SELECT note.creation_date FROM note WHERE note.creation_date NOT IN (SELECT DISTINCT child_creation_date FROM note_association) ORDER BY note.last_edit_time DESC")
-    fun getMainNotesFlow(): Flow<List<String>>
+    fun getMainNotesFlow(): Flow<List<Date>>
 
     /**
      * Get all children of a note recursively
@@ -37,5 +37,5 @@ interface NoteDao {
         SELECT note.* FROM note JOIN children ON note.creation_date = children.child_creation_date
         """
     )
-    suspend fun getChildren(parentCreationDate: String): List<Note>
+    suspend fun getChildren(parentCreationDate: Date): List<Note>
 }

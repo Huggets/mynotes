@@ -26,8 +26,8 @@ import androidx.room.ForeignKey
 )
 data class NoteAssociation(
     @ColumnInfo(name = "parent_creation_date")
-    var parentCreationDate: String,
+    var parentCreationDate: Date,
 
     @ColumnInfo(name = "child_creation_date")
-    var childCreationDate: String,
+    var childCreationDate: Date,
 )
