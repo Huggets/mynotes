@@ -250,16 +250,10 @@ private fun NoteElementList(
 
         LazyColumn(
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
             modifier = modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(0.dp, Value.smallSpacing),
         ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .fillMaxWidth()
-                )
-            }
             for (mainNoteCreationDate in appState.value.mainNoteCreationDates) {
                 item(key = mainNoteCreationDate.hashCode()) {
                     val note = appState.value.allNotes.find(mainNoteCreationDate)
@@ -273,13 +267,6 @@ private fun NoteElementList(
                         )
                     }
                 }
-            }
-            item {
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .fillMaxWidth()
-                )
             }
         }
     }
