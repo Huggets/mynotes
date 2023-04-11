@@ -1,12 +1,14 @@
 package com.huggets.mynotes
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
+import java.io.FileNotFoundException
 
 class MainActivity : ComponentActivity() {
 
@@ -18,16 +20,27 @@ class MainActivity : ComponentActivity() {
         val createDocument =
             registerForActivityResult(ActivityResultContracts.CreateDocument("text/xml")) {
                 if (it != null) {
-                    applicationContext.contentResolver.openOutputStream(it, "wt")?.let { stream ->
-                        noteViewModel.exportToXml(stream)
+                    try {
+                        applicationContext.contentResolver.openOutputStream(it, "wt")
+                            ?.let { stream ->
+                                noteViewModel.exportToXml(stream)
+                            }
+                    } catch (e: FileNotFoundException) {
+                        // TODO show a snack bar
+                        Log.e("MainActivity", e.stackTraceToString())
                     }
                 }
             }
         val readDocument =
             registerForActivityResult(ActivityResultContracts.OpenDocument()) {
                 if (it != null) {
-                    applicationContext.contentResolver.openInputStream(it)?.let { stream ->
-                        noteViewModel.importFromXml(stream)
+                    try {
+                        applicationContext.contentResolver.openInputStream(it)?.let { stream ->
+                            noteViewModel.importFromXml(stream)
+                        }
+                    } catch (e: FileNotFoundException) {
+                        // TODO show a snack bar
+                        Log.e("MainActivity", e.stackTraceToString())
                     }
                 }
             }
