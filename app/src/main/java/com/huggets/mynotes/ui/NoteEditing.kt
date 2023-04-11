@@ -291,9 +291,11 @@ private fun AssociatedNotes(
 ) {
     val parentExists = parentCreationDate != null
 
-    // TODO Use vertical arrangement instead of padding
-    LazyColumn(modifier) {
-        item(0) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
+        modifier = modifier,
+    ) {
+        item(Date(0, 0, 0, 0, 0, 0, 0).hashCode()) {
             Button(
                 onClick = {
                     // Create a new note
@@ -303,7 +305,6 @@ private fun AssociatedNotes(
                 },
                 shape = ShapeDefaults.Small,
                 modifier = Modifier
-                    .padding(0.dp, 0.dp, 0.dp, 8.dp)
                     .fillMaxWidth(),
                 enabled = parentExists,
             ) {
@@ -325,9 +326,7 @@ private fun AssociatedNotes(
                                 Destinations.generateEditNoteDestination(note.creationDate, null)
                             )
                         },
-                        modifier = Modifier
-                            .padding(0.dp, 0.dp, 0.dp, 8.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }

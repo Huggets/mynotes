@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.dp
 
 object Value {
     val smallPadding = 12.dp
+    val smallSpacing = 8.dp
 
     object Limit {
         val minWidthRequiredExtendedFab = 400.dp
