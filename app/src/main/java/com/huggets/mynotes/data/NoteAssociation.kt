@@ -3,8 +3,7 @@ package com.huggets.mynotes.data
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
-
-// TODO Implements indices
+import androidx.room.Index
 
 @Entity(
     tableName = "note_association",
@@ -23,6 +22,7 @@ import androidx.room.ForeignKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
+    indices = [Index("child_creation_date")],
 )
 data class NoteAssociation(
     @ColumnInfo(name = "parent_creation_date")

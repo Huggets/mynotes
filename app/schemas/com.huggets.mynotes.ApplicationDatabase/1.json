@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "95f156903b8a62461c4debbb14101e96",
+    "identityHash": "baa535ffb7b7745016301e8e9ce6aefa",
     "entities": [
       {
         "tableName": "note",
@@ -66,7 +66,17 @@
             "child_creation_date"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_note_association_child_creation_date",
+            "unique": false,
+            "columnNames": [
+              "child_creation_date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_note_association_child_creation_date` ON `${TABLE_NAME}` (`child_creation_date`)"
+          }
+        ],
         "foreignKeys": [
           {
             "table": "note",
@@ -96,7 +106,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '95f156903b8a62461c4debbb14101e96')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'baa535ffb7b7745016301e8e9ce6aefa')"
     ]
   }
 }
