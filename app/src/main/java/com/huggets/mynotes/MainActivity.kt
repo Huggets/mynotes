@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import com.huggets.mynotes.note.NoteViewModel
+import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
 
 class MainActivity : ComponentActivity() {

@@ -1,6 +1,6 @@
 package com.huggets.mynotes.ui.state
 
-import com.huggets.mynotes.note.Note
+import com.huggets.mynotes.data.Note
 import java.util.*
 
 data class NoteItemUiState(

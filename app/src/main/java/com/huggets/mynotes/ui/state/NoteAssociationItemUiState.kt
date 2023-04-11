@@ -1,6 +1,6 @@
 package com.huggets.mynotes.ui.state
 
-import com.huggets.mynotes.note.NoteAssociation
+import com.huggets.mynotes.data.NoteAssociation
 
 data class NoteAssociationItemUiState(
     val parentCreationDate: String,

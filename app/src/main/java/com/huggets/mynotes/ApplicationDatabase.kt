@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.huggets.mynotes.note.Note
-import com.huggets.mynotes.note.NoteAssociation
-import com.huggets.mynotes.note.NoteAssociationDao
-import com.huggets.mynotes.note.NoteDao
+import com.huggets.mynotes.data.Note
+import com.huggets.mynotes.data.NoteAssociation
+import com.huggets.mynotes.data.NoteAssociationDao
+import com.huggets.mynotes.data.NoteDao
 
 @Database(
     version = 1,

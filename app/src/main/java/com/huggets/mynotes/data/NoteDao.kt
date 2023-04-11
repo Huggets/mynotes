@@ -1,4 +1,4 @@
-package com.huggets.mynotes.note
+package com.huggets.mynotes.data
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

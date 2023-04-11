@@ -1,4 +1,4 @@
-package com.huggets.mynotes.note
+package com.huggets.mynotes.data
 
 import android.content.Context
 import com.huggets.mynotes.ApplicationDatabase

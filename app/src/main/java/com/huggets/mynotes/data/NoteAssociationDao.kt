@@ -1,4 +1,4 @@
-package com.huggets.mynotes.note
+package com.huggets.mynotes.data
 
 import androidx.room.Dao
 import androidx.room.Insert
