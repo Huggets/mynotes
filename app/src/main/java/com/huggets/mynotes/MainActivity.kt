@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
 import java.io.FileNotFoundException
+import java.util.*
 
 class MainActivity : ComponentActivity() {
 
@@ -49,7 +50,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val exportToXml: () -> Unit = {
-                createDocument.launch("notes.xml")
+                val calendar = Calendar.getInstance()
+                val year = calendar.get(Calendar.YEAR)
+                val month = calendar.get(Calendar.MONTH)
+                val day = calendar.get(Calendar.DAY_OF_MONTH)
+                val hour = calendar.get(Calendar.HOUR_OF_DAY)
+                val minute = calendar.get(Calendar.MINUTE)
+                val second = calendar.get(Calendar.SECOND)
+
+                createDocument.launch(
+                    "notes_$year-$month-$day-$hour-$minute-$second.xml"
+                )
             }
             val importFromXml: () -> Unit = {
                 readDocument.launch(arrayOf("text/xml"))
