@@ -39,16 +39,16 @@ import com.huggets.mynotes.ui.state.find
 fun NoteEditing(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    noteCreationDate: Date?,
+    noteCreationDate: Date,
     parentNoteCreationDate: Date?,
+    createNote: (Date, Date?) -> Unit,
     saveNote: (NoteItemUiState, Date?) -> Unit,
     deleteNote: (Date) -> Unit,
+    isNew: Boolean,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
-
-    val isNewNote = noteCreationDate == null
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
@@ -73,22 +73,16 @@ fun NoteEditing(
         }
     }
 
-    if (isDeleted) {
+    val note = appState.value.allNotes.find(noteCreationDate)
+
+    if (isDeleted || note == null) {
         Box(modifier = Modifier.fillMaxSize()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
     } else {
-        val currentTime = Date.getCurrentTime()
-        val note = if (isNewNote) {
-            NoteItemUiState("", "", currentTime, currentTime)
-        } else {
-            appState.value.allNotes.find(noteCreationDate!!)
-                ?: throw NoSuchElementException("Note with creationDate=$noteCreationDate not found")
-        }
-
         val title = rememberSaveable { mutableStateOf(note.title) }
         val content = rememberSaveable { mutableStateOf(note.content) }
-        val onSave: () -> Unit = {
+        val saveChanges: () -> Unit = {
             saveNote(
                 NoteItemUiState(
                     title.value,
@@ -97,6 +91,9 @@ fun NoteEditing(
                     Date.getCurrentTime(),
                 ), parentNoteCreationDate
             )
+        }
+        val saveAndPopBackStack: () -> Unit = {
+            saveChanges()
             navigationController.popBackStack()
         }
         val onDelete: () -> Unit = {
@@ -109,10 +106,8 @@ fun NoteEditing(
         ConfirmationDialog(
             displayDialog = showDeleteConfirmation,
             onConfirmation = {
-                if (!isNewNote) {
-                    deleteNote(note.creationDate)
-                    isDeleted = true
-                }
+                deleteNote(noteCreationDate)
+                isDeleted = true
                 navigationController.popBackStack()
             },
             confirmationMessage = "Are you sure you want to delete this note?"
@@ -120,6 +115,11 @@ fun NoteEditing(
         ConfirmationDialog(
             displayDialog = showCancelConfirmation,
             onConfirmation = {
+                if (isNew) {
+                    // The note is not kept and must be deleted
+                    deleteNote(noteCreationDate)
+                    isDeleted = true
+                }
                 navigationController.popBackStack()
             },
             confirmationMessage = "Cancel changes?",
@@ -129,7 +129,7 @@ fun NoteEditing(
             topBar = {
                 AppBar(
                     onDelete = onDelete,
-                    onSave = onSave,
+                    onSave = saveAndPopBackStack,
                     onBack = onBack,
                     title = title,
                 )
@@ -204,6 +204,8 @@ fun NoteEditing(
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
                             navigationController = navigationController,
+                            saveParentNote = saveChanges,
+                            createNote = createNote,
                             modifier = Modifier.padding(Value.smallPadding)
                         )
                     }
@@ -283,14 +285,14 @@ private fun Tab(
 
 @Composable
 private fun AssociatedNotes(
-    parentCreationDate: Date?,
+    parentCreationDate: Date,
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
     navigationController: NavHostController,
+    saveParentNote: () -> Unit,
+    createNote: (Date, Date?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val parentExists = parentCreationDate != null
-
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
         modifier = modifier,
@@ -298,21 +300,22 @@ private fun AssociatedNotes(
         item(Date(0, 0, 0, 0, 0, 0, 0).hashCode()) {
             Button(
                 onClick = {
-                    // Create a new note
+                    val creationDate = Date.getCurrentTime()
+
+                    // Save the current note to avoid losing the changes
+                    saveParentNote()
+
+                    // Then create and edit the new note
+                    createNote(creationDate, parentCreationDate)
+
                     navigationController.navigate(
-                        Destinations.generateEditNoteDestination(null, parentCreationDate)
+                        Destinations.generateEditNote(creationDate, parentCreationDate, true)
                     )
                 },
                 shape = ShapeDefaults.Small,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                enabled = parentExists,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                if (parentExists) {
-                    Text("Associate a new note")
-                } else {
-                    Text("You need to save before adding associated notes")
-                }
+                Text("Associate a new note")
             }
         }
         for (associatedNote in associatedNotes) {
@@ -321,9 +324,16 @@ private fun AssociatedNotes(
                     AssociatedNoteElement(
                         text = note.title,
                         onClick = {
-                            // Open the note
+                            // Save the current note to avoid losing the changes
+                            saveParentNote()
+
+                            // Open the associated note
                             navigationController.navigate(
-                                Destinations.generateEditNoteDestination(note.creationDate, null)
+                                Destinations.generateEditNote(
+                                    note.creationDate,
+                                    parentCreationDate,
+                                    false
+                                )
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),

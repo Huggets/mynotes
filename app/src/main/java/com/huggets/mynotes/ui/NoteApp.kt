@@ -138,6 +138,16 @@ fun NoteApp(
             }
         }
 
+    val createNote: (Date, Date?) -> Unit = { creationDate, parentCreationDate ->
+        noteViewModel.createNote(creationDate, parentCreationDate)
+    }
+    val updateNote: (NoteItemUiState, Date?) -> Unit = { note, _ ->
+        noteViewModel.updateNote(note)
+    }
+    val deleteNote: (Date) -> Unit = {
+        noteViewModel.deleteNote(it)
+    }
+
     noteViewModel.syncUiState()
 
     AppTheme {
@@ -162,6 +172,7 @@ fun NoteApp(
                         appState,
                         fabPosition,
                         deleteNotes,
+                        createNote,
                         exportToXml,
                         importFromXml,
                     )
@@ -179,20 +190,16 @@ fun NoteApp(
                     val parentCreationDate =
                         backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteCreationDate)
                             ?.let { Date.fromString(it) }
-                    val saveNote: (NoteItemUiState, Date?) -> Unit = { note, _ ->
-                        noteViewModel.updateNote(note)
-                    }
-                    val deleteNote: (Date) -> Unit = {
-                        noteViewModel.deleteNote(it)
-                    }
 
                     NoteEditing(
                         navigationController,
                         appState,
                         noteCreationDate,
                         parentCreationDate,
-                        saveNote,
+                        createNote,
+                        updateNote,
                         deleteNote,
+                        false,
                     )
                 }
                 composable(
@@ -202,23 +209,22 @@ fun NoteApp(
                     popExitTransition = editNotePopExitTransition,
                     popEnterTransition = editNotePopEnterTransition,
                 ) { backStackEntry ->
+                    val noteCreationDate = Date.fromString(
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteCreationDate)!!
+                    )
                     val parentCreationDate =
                         backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteCreationDate)
                             ?.let { Date.fromString(it) }
-                    val saveNote: (NoteItemUiState, Date?) -> Unit = { note, parent ->
-                        noteViewModel.createNote(note, parent)
-                    }
-                    val deleteNote: (Date) -> Unit = {
-                        noteViewModel.deleteNote(it)
-                    }
 
                     NoteEditing(
                         navigationController,
                         appState,
-                        null,
+                        noteCreationDate,
                         parentCreationDate,
-                        saveNote,
+                        createNote,
+                        updateNote,
                         deleteNote,
+                        true,
                     )
                 }
             }

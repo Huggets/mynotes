@@ -67,6 +67,7 @@ fun NoteList(
     appState: State<NoteAppUiState>,
     fabPosition: MutableState<FabPosition>,
     deleteNotes: (List<Date>) -> Unit,
+    createNote: (Date, Date?) -> Unit,
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
 ) {
@@ -134,7 +135,7 @@ fun NoteList(
                 )
             },
             floatingActionButton = {
-                Fab(navigationController, this, fabTransitionState)
+                Fab(navigationController, this, fabTransitionState, createNote)
             },
             floatingActionButtonPosition = fabPosition.value,
         ) { padding ->
@@ -195,9 +196,10 @@ private fun NoteElementList(
             }
         } else {
             navigationController.navigate(
-                Destinations.generateEditNoteDestination(
+                Destinations.generateEditNote(
                     creationDate,
-                    null
+                    null,
+                    false,
                 )
             )
         }
@@ -379,10 +381,15 @@ private fun Fab(
     navigationController: NavHostController,
     constraintsScope: BoxWithConstraintsScope,
     transitionState: MutableTransitionState<Boolean>,
+    createNote: (Date, Date?) -> Unit,
 ) {
     val openNewNote: () -> Unit = {
+        val creationDate = Date.getCurrentTime()
+
+        createNote(creationDate, null)
+
         navigationController.navigate(
-            Destinations.generateEditNoteDestination(null, null)
+            Destinations.generateEditNote(creationDate, null, true)
         )
     }
     val label = "Add a new note"

@@ -81,19 +81,21 @@ class NoteViewModel(context: Context) : ViewModel() {
      *
      * If a parent note id is not null, the note will be associated with this parent note.
      */
-    fun createNote(note: NoteItemUiState, parentNoteCreationDate: Date?) {
+    fun createNote(creationDate: Date, parentNoteCreationDate: Date?) {
         viewModelScope.launch {
-            noteRepository.insert(note.toNote())
-            associateNote(note, parentNoteCreationDate)
+            val newNote = Note("", "", creationDate, creationDate)
+
+            noteRepository.insert(newNote)
+            associateNote(creationDate, parentNoteCreationDate)
         }
     }
 
-    private suspend fun associateNote(note: NoteItemUiState, parentNoteCreationDate: Date?) {
+    private suspend fun associateNote(creationDate: Date, parentNoteCreationDate: Date?) {
         if (parentNoteCreationDate != null) {
             noteAssociationRepository.insert(
                 NoteAssociationItemUiState(
                     parentNoteCreationDate,
-                    note.creationDate,
+                    creationDate,
                 ).toNoteAssociation()
             )
         }

@@ -14,7 +14,7 @@ object Destinations {
 
     const val viewNoteListRoute = viewNoteList
     const val newNoteRoute =
-        "$newNote?${ParametersName.parentNoteCreationDate}={${ParametersName.parentNoteCreationDate}}"
+        "$newNote/{${ParametersName.noteCreationDate}}?${ParametersName.parentNoteCreationDate}={${ParametersName.parentNoteCreationDate}}"
     const val editNoteRoute =
         "$editNote/{${ParametersName.noteCreationDate}}?${ParametersName.parentNoteCreationDate}={${ParametersName.parentNoteCreationDate}}"
 
@@ -26,22 +26,24 @@ object Destinations {
     /**
      * Generate a route to the edit note destination.
      *
-     * @param noteCreationDate If noteCreationDate is null, then the destination is for a new note.
+     * @param noteCreationDate The creation date of the note to edit.
      * @param parentCreationDate If parentCreationDate is null, then the note will be a root note,
-     * otherwise it will be associated to another the parent note.
+     * otherwise it will be associated to the parent note.
+     * @param isNew If the note is a new note or an existing one.
      */
-    fun generateEditNoteDestination(
-        noteCreationDate: Date?,
-        parentCreationDate: Date?
+    fun generateEditNote(
+        noteCreationDate: Date,
+        parentCreationDate: Date?,
+        isNew: Boolean,
     ): String {
         val parent: String? =
             if (parentCreationDate == null) null
             else "${ParametersName.parentNoteCreationDate}=$parentCreationDate"
 
-        return if (noteCreationDate != null) {
-            "$editNote/$noteCreationDate?$parent"
+        return if (isNew) {
+            "$newNote/$noteCreationDate?$parent"
         } else {
-            "$newNote?$parent"
+            "$editNote/$noteCreationDate?$parent"
         }
     }
 }
