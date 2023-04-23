@@ -123,6 +123,7 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.endTag("", "data")
 
             serializer.endDocument()
+            stream.close()
         }
     }
 
@@ -184,6 +185,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                             val note = NoteItemUiState(title, content, creationDate, lastEditTime)
                             noteRepository.insert(note.toNote())
                         }
+
                         "noteAssociation" -> {
                             val parentCreationDate = Date.fromString(
                                 parser.getAttributeValue("", "parentCreationDate")
@@ -203,6 +205,8 @@ class NoteViewModel(context: Context) : ViewModel() {
                 }
                 eventType = parser.next()
             }
+
+            stream.close()
         }
     }
 
