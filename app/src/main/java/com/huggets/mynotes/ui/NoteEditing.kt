@@ -96,10 +96,10 @@ fun NoteEditing(
             saveChanges()
             navigationController.popBackStack()
         }
-        val onDelete: () -> Unit = {
+        val showDeleteConfirmationDialog: () -> Unit = {
             showDeleteConfirmation.value = true
         }
-        val onBack: () -> Unit = {
+        val showCancelConfirmationDialog: () -> Unit = {
             showCancelConfirmation.value = true
         }
 
@@ -128,17 +128,15 @@ fun NoteEditing(
         Scaffold(
             topBar = {
                 AppBar(
-                    onDelete = onDelete,
+                    onDelete = showDeleteConfirmationDialog,
                     onSave = saveAndPopBackStack,
-                    onBack = onBack,
+                    onBack = showCancelConfirmationDialog,
                     title = title,
                 )
             },
         ) { paddingValues ->
             Column(
-                Modifier
-                    .padding(paddingValues)
-                    .fillMaxWidth()
+                Modifier.padding(paddingValues).fillMaxWidth(),
             ) {
                 val index = rememberSaveable { mutableStateOf(0) }
 
@@ -206,7 +204,7 @@ fun NoteEditing(
                             navigationController = navigationController,
                             saveParentNote = saveChanges,
                             createNote = createNote,
-                            modifier = Modifier.padding(Value.smallPadding)
+                            modifier = Modifier.padding(Value.smallPadding),
                         )
                     }
                 }
@@ -332,7 +330,7 @@ private fun AssociatedNotes(
                                 Destinations.generateEditNote(
                                     note.creationDate,
                                     parentCreationDate,
-                                    false
+                                    false,
                                 )
                             )
                         },
