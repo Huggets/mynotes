@@ -202,7 +202,6 @@ fun NoteEditing(
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
                             navigationController = navigationController,
-                            saveParentNote = saveChanges,
                             createNote = createNote,
                             modifier = Modifier.padding(Value.smallPadding),
                         )
@@ -287,7 +286,6 @@ private fun AssociatedNotes(
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
     navigationController: NavHostController,
-    saveParentNote: () -> Unit,
     createNote: (Date, Date?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -300,10 +298,7 @@ private fun AssociatedNotes(
                 onClick = {
                     val creationDate = Date.getCurrentTime()
 
-                    // Save the current note to avoid losing the changes
-                    saveParentNote()
-
-                    // Then create and edit the new note
+                    // Create and edit the new note
                     createNote(creationDate, parentCreationDate)
 
                     navigationController.navigate(
@@ -322,9 +317,6 @@ private fun AssociatedNotes(
                     AssociatedNoteElement(
                         text = note.title,
                         onClick = {
-                            // Save the current note to avoid losing the changes
-                            saveParentNote()
-
                             // Open the associated note
                             navigationController.navigate(
                                 Destinations.generateEditNote(
