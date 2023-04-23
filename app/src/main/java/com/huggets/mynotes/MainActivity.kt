@@ -8,8 +8,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
-import java.util.*
+import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
 
@@ -21,27 +24,36 @@ class MainActivity : ComponentActivity() {
         val createDocument =
             registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
                 if (it != null) {
-                    try {
-                        applicationContext.contentResolver.openOutputStream(it, "wt")
-                            ?.let { stream ->
-                                noteViewModel.exportToXml(stream)
+                    runBlocking {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                applicationContext.contentResolver.openOutputStream(it, "wt")
+                                    ?.let { stream ->
+                                        noteViewModel.exportToXml(stream)
+                                    }
+                            } catch (e: FileNotFoundException) {
+                                // TODO show a snack bar
+                                Log.e("MainActivity", e.stackTraceToString())
                             }
-                    } catch (e: FileNotFoundException) {
-                        // TODO show a snack bar
-                        Log.e("MainActivity", e.stackTraceToString())
+                        }
                     }
                 }
             }
         val readDocument =
             registerForActivityResult(ActivityResultContracts.OpenDocument()) {
                 if (it != null) {
-                    try {
-                        applicationContext.contentResolver.openInputStream(it)?.let { stream ->
-                            noteViewModel.importFromXml(stream)
+                    runBlocking {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                applicationContext.contentResolver.openInputStream(it)
+                                    ?.let { stream ->
+                                        noteViewModel.importFromXml(stream)
+                                    }
+                            } catch (e: FileNotFoundException) {
+                                // TODO show a snack bar
+                                Log.e("MainActivity", e.stackTraceToString())
+                            }
                         }
-                    } catch (e: FileNotFoundException) {
-                        // TODO show a snack bar
-                        Log.e("MainActivity", e.stackTraceToString())
                     }
                 }
             }
