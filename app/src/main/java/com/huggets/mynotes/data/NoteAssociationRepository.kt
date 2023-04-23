@@ -1,7 +1,6 @@
 package com.huggets.mynotes.data
 
 import android.content.Context
-import com.huggets.mynotes.ApplicationDatabase
 
 class NoteAssociationRepository(context: Context) {
     private val noteAssociationDao = ApplicationDatabase.getDb(context).noteAssociationDao()

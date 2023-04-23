@@ -1,7 +1,6 @@
 package com.huggets.mynotes.data
 
 import android.content.Context
-import com.huggets.mynotes.ApplicationDatabase
 
 class NoteRepository(context: Context) {
 
