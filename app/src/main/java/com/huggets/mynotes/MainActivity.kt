@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         val noteViewModel: NoteViewModel by viewModels { NoteViewModel.Factory }
 
         val createDocument =
-            registerForActivityResult(ActivityResultContracts.CreateDocument("text/xml")) {
+            registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
                 if (it != null) {
                     try {
                         applicationContext.contentResolver.openOutputStream(it, "wt")
@@ -59,11 +59,11 @@ class MainActivity : ComponentActivity() {
                 val second = calendar.get(Calendar.SECOND)
 
                 createDocument.launch(
-                    "notes_$year-$month-$day-$hour-$minute-$second.xml"
+                    "notes_$year-$month-$day-$hour-$minute-$second.txt"
                 )
             }
             val importFromXml: () -> Unit = {
-                readDocument.launch(arrayOf("text/xml"))
+                readDocument.launch(arrayOf("text/plain"))
             }
 
             NoteApp(
