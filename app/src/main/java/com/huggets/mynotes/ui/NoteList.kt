@@ -70,6 +70,7 @@ fun NoteList(
     createNote: (Date, Date?) -> Unit,
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val deleteSelectedNote: () -> Unit = { showDeleteConfirmation.value = true }
@@ -138,6 +139,7 @@ fun NoteList(
                 Fab(navigationController, this, fabTransitionState, createNote)
             },
             floatingActionButtonPosition = fabPosition.value,
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { padding ->
             NoteElementList(
                 navigationController,

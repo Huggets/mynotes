@@ -6,6 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +26,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val noteViewModel: NoteViewModel by viewModels { NoteViewModel.Factory }
+        var showSnackbar: MutableState<Boolean>? = null
+        var snackbarMessage: MutableState<String>? = null
 
         val createDocument =
             registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
@@ -32,8 +40,11 @@ class MainActivity : ComponentActivity() {
                                         noteViewModel.exportToXml(stream)
                                     }
                             } catch (e: FileNotFoundException) {
-                                // TODO show a snack bar
+                                // Show an error message in the log and in a snackbar
                                 Log.e("MainActivity", e.stackTraceToString())
+
+                                snackbarMessage?.value = "Error when writing to file!"
+                                showSnackbar?.value = true
                             }
                         }
                     }
@@ -50,8 +61,11 @@ class MainActivity : ComponentActivity() {
                                         noteViewModel.importFromXml(stream)
                                     }
                             } catch (e: FileNotFoundException) {
-                                // TODO show a snack bar
+                                // Show an error message in the log and in a snackbar
                                 Log.e("MainActivity", e.stackTraceToString())
+
+                                snackbarMessage?.value = "Error when reading file!"
+                                showSnackbar?.value = true
                             }
                         }
                     }
@@ -77,12 +91,23 @@ class MainActivity : ComponentActivity() {
             val importFromXml: () -> Unit = {
                 readDocument.launch(arrayOf("text/plain"))
             }
+            val snackbarHostState = remember { SnackbarHostState() }
+            showSnackbar = rememberSaveable { mutableStateOf(false) }
+            snackbarMessage = rememberSaveable { mutableStateOf("") }
+
+            if (showSnackbar!!.value) {
+                LaunchedEffect(snackbarHostState) {
+                    snackbarHostState.showSnackbar(snackbarMessage!!.value)
+                    showSnackbar!!.value = false
+                }
+            }
 
             NoteApp(
                 quitApplication = quitApplication,
                 exportToXml = exportToXml,
                 importFromXml = importFromXml,
                 noteViewModel = noteViewModel,
+                snackbarHostState = snackbarHostState,
             )
         }
     }
