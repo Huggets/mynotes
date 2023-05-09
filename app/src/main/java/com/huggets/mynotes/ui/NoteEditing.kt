@@ -51,15 +51,22 @@ fun NoteEditing(
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
+    val cancelNoteChanges: () -> Unit = {
+        if (isModified.value) {
+            showCancelConfirmation.value = true
+        } else {
+            if (isNew) {
+                // The note is not kept and must be deleted
+                deleteNote(noteCreationDate)
+                isDeleted = true
+            }
+            navigationController.popBackStack()
+        }
+    }
+
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (isModified.value) {
-                    showCancelConfirmation.value = true
-                } else {
-                    navigationController.popBackStack()
-                }
-            }
+            override fun handleOnBackPressed() = cancelNoteChanges()
         }
     }
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current
@@ -103,13 +110,6 @@ fun NoteEditing(
         }
         val showDeleteConfirmationDialog: () -> Unit = {
             showDeleteConfirmation.value = true
-        }
-        val cancelNoteChanges: () -> Unit = {
-            if (isModified.value) {
-                showCancelConfirmation.value = true
-            } else {
-                navigationController.popBackStack()
-            }
         }
 
         ConfirmationDialog(
