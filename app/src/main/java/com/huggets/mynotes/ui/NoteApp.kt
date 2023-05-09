@@ -52,34 +52,52 @@ fun NoteApp(
     val fabPosition =
         rememberSaveable(stateSaver = fabPositionSaver) { mutableStateOf(FabPosition.Center) }
 
-    val enterScreenSpec = Animation.emphasizedDecelerate<IntOffset>()
-    val exitScreenPermanentlySpec = Animation.emphasizedAccelerate<IntOffset>()
-    val fadeInSpec = tween<Float>(enterScreenSpec.durationMillis)
-    val fadeOutSpec = tween<Float>(exitScreenPermanentlySpec.durationMillis)
+    val enterScreenIntOffsetSpec = Animation.emphasizedDecelerate<IntOffset>()
+    val enterScreenFloatSpec = tween<Float>(enterScreenIntOffsetSpec.durationMillis)
+    val exitScreenPermanentlyIntOffsetSpec = Animation.emphasizedAccelerate<IntOffset>()
+    val exitScreenPermanentlyFloatSpec =
+        tween<Float>(exitScreenPermanentlyIntOffsetSpec.durationMillis)
 
     val enterScreenFromRight =
-        (fadeIn(fadeInSpec) + slideInHorizontally(enterScreenSpec) { (it * slideOffset).toInt() })
+        (fadeIn(enterScreenFloatSpec) +
+                slideInHorizontally(enterScreenIntOffsetSpec) { (it * slideOffset).toInt() })
     val enterScreenFromLeft =
-        (fadeIn(fadeInSpec) + slideInHorizontally(enterScreenSpec) { -(it * slideOffset).toInt() })
+        (fadeIn(enterScreenFloatSpec) +
+                slideInHorizontally(enterScreenIntOffsetSpec) { -(it * slideOffset).toInt() })
     val leaveScreenToRight =
-        (fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanentlySpec) { (it * slideOffset).toInt() })
+        (fadeOut(exitScreenPermanentlyFloatSpec) +
+                slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
+                    (it * slideOffset).toInt()
+                })
     val leaveScreenToLeft =
-        (fadeOut(fadeOutSpec) + slideOutHorizontally(exitScreenPermanentlySpec) { -(it * slideOffset).toInt() })
+        (fadeOut(exitScreenPermanentlyFloatSpec) +
+                slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
+                    -(it * slideOffset).toInt()
+                })
     val inNewNoteCenter =
-        (scaleIn(transformOrigin = TransformOrigin(0.5f, 1f)) +
-                slideIn { IntOffset(0, it.height) })
+        (scaleIn(
+            transformOrigin = TransformOrigin(0.5f, 1f),
+            animationSpec = enterScreenFloatSpec,
+        ) +
+                slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) })
     val inNewNoteRight =
         (scaleIn(
-            transformOrigin = TransformOrigin(1f, 1f)
-        ) + slideIn { IntOffset(it.width, it.height) })
+            transformOrigin = TransformOrigin(1f, 1f),
+            animationSpec = enterScreenFloatSpec,
+        ) +
+                slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) })
     val outNewNoteCenter =
         (scaleOut(
-            transformOrigin = TransformOrigin(0.5f, 1f)
-        ) + slideOut { IntOffset(0, it.height) })
+            transformOrigin = TransformOrigin(0.5f, 1f),
+            animationSpec = exitScreenPermanentlyFloatSpec,
+        ) +
+                slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) })
     val outNewNoteRight =
         (scaleOut(
-            transformOrigin = TransformOrigin(1f, 1f)
-        ) + slideOut { IntOffset(it.width, it.height) })
+            transformOrigin = TransformOrigin(1f, 1f),
+            animationSpec = exitScreenPermanentlyFloatSpec,
+        ) +
+                slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) })
 
     val isNewNote: (NavBackStackEntry) -> Boolean = {
         it.destination.route == Destinations.newNoteRoute
