@@ -47,13 +47,18 @@ fun NoteEditing(
     isNew: Boolean,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
+    val isModified = rememberSaveable { mutableStateOf(false) }
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
     val onBackPressed = remember {
         object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                showCancelConfirmation.value = true
+                if (isModified.value) {
+                    showCancelConfirmation.value = true
+                } else {
+                    navigationController.popBackStack()
+                }
             }
         }
     }
@@ -99,8 +104,12 @@ fun NoteEditing(
         val showDeleteConfirmationDialog: () -> Unit = {
             showDeleteConfirmation.value = true
         }
-        val showCancelConfirmationDialog: () -> Unit = {
-            showCancelConfirmation.value = true
+        val cancelNoteChanges: () -> Unit = {
+            if (isModified.value) {
+                showCancelConfirmation.value = true
+            } else {
+                navigationController.popBackStack()
+            }
         }
 
         ConfirmationDialog(
@@ -130,8 +139,9 @@ fun NoteEditing(
                 AppBar(
                     onDelete = showDeleteConfirmationDialog,
                     onSave = saveAndPopBackStack,
-                    onBack = showCancelConfirmationDialog,
+                    onBack = cancelNoteChanges,
                     title = title,
+                    isTitleModified = isModified,
                 )
             },
         ) { paddingValues ->
@@ -176,7 +186,10 @@ fun NoteEditing(
 
                         TextField(
                             value = content.value,
-                            onValueChange = { content.value = it },
+                            onValueChange = {
+                                content.value = it
+                                isModified.value = true
+                            },
                             colors = colors,
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             modifier = Modifier.fillMaxSize(),
@@ -373,6 +386,7 @@ private fun AppBar(
     onSave: () -> Unit,
     onBack: () -> Unit,
     title: MutableState<String>,
+    isTitleModified: MutableState<Boolean>,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -385,7 +399,10 @@ private fun AppBar(
 
             TextField(
                 value = title.value,
-                onValueChange = { title.value = it },
+                onValueChange = {
+                    title.value = it
+                    isTitleModified.value = true
+                },
                 singleLine = true,
                 colors = colors,
                 placeholder = {
