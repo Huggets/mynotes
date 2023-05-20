@@ -9,7 +9,7 @@ import com.huggets.mynotes.data.*
 
 @Database(
     version = 1,
-    entities = [Note::class, NoteAssociation::class],
+    entities = [Note::class, NoteAssociation::class, Preference::class],
     exportSchema = true,
 )
 @TypeConverters(Converter::class)
@@ -17,6 +17,7 @@ abstract class ApplicationDatabase : RoomDatabase() {
 
     abstract fun noteDao(): NoteDao
     abstract fun noteAssociationDao(): NoteAssociationDao
+    abstract fun preferenceDao(): PreferenceDao
 
     companion object {
         private var db: ApplicationDatabase? = null

@@ -1,7 +1,6 @@
 package com.huggets.mynotes.data
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Xml
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -20,18 +19,35 @@ import org.xmlpull.v1.XmlSerializer
 import java.io.InputStream
 import java.io.OutputStream
 
-class NoteViewModel(
-    context: Context,
-    private val preferences: SharedPreferences,
-) : ViewModel() {
+class NoteViewModel(context: Context) : ViewModel() {
 
     private val noteRepository = NoteRepository(context)
     private val noteAssociationRepository = NoteAssociationRepository(context)
+    private val preferenceRepository = PreferenceRepository(context)
 
-    private var noteIdGenerator: Int = preferences.getInt(PREFERENCES_NOTE_ID_GENERATOR_KEY, 0)
+    private var noteIdGenerator: Int
 
     private val _uiState = MutableStateFlow(NoteAppUiState())
     val uiState = _uiState.asStateFlow()
+
+    init {
+        // Default value is 0 but we need to wait for the value to be retrieved from the database
+
+        noteIdGenerator = 0
+
+        viewModelScope.launch {
+            preferenceRepository.getPreference(PREFERENCES_NOTE_ID_GENERATOR).apply {
+                if (this != null) {
+                    noteIdGenerator = value.toInt()
+                } else {
+                    val preference =
+                        Preference(PREFERENCES_NOTE_ID_GENERATOR, noteIdGenerator.toString())
+                    preferenceRepository.setPreference(preference)
+                }
+            }
+            _uiState.value = _uiState.value.copy(isInitializationFinished = true)
+        }
+    }
 
     fun syncUiState() {
         viewModelScope.launch {
@@ -219,26 +235,27 @@ class NoteViewModel(
     private fun generateNewNoteId(): Int {
         val newId = ++noteIdGenerator
 
-        with(preferences.edit()) {
-            putInt(PREFERENCES_NOTE_ID_GENERATOR_KEY, noteIdGenerator)
-            apply()
+        viewModelScope.launch {
+            val preference = Preference(
+                PREFERENCES_NOTE_ID_GENERATOR,
+                newId.toString()
+            )
+
+            preferenceRepository.setPreference(preference)
         }
 
         return newId
     }
 
     companion object {
-        private const val PREFERENCES_FILE_NAME = "com.huggets.mynotes.preferences"
-        private const val PREFERENCES_NOTE_ID_GENERATOR_KEY = "note_id_generator"
+        private const val PREFERENCES_NOTE_ID_GENERATOR = "note_id_generator"
 
         @Suppress("UNCHECKED_CAST")
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val application = checkNotNull(extras[APPLICATION_KEY])
-                val preferences =
-                    application.getSharedPreferences(PREFERENCES_FILE_NAME, Context.MODE_PRIVATE)
 
-                return NoteViewModel(application, preferences) as? T
+                return NoteViewModel(application) as? T
                     ?: throw IllegalArgumentException("Unknown ViewModel class")
             }
         }

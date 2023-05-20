@@ -214,7 +214,17 @@ private fun NoteElementList(
         }
     }
 
-    if (appState.value.mainNoteIds.isEmpty()) {
+    if (!appState.value.isInitializationFinished) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(Value.smallPadding)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+    } else if (appState.value.mainNoteIds.isEmpty()) {
         Box(
             modifier = modifier
                 .fillMaxWidth()

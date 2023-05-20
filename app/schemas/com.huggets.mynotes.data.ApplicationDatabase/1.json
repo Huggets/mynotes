@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "cbf4b17a3293a95471d0dcae87e3fe06",
+    "identityHash": "5c7e8c62ea2660e550aaea26c9da706d",
     "entities": [
       {
         "tableName": "note",
@@ -59,7 +59,7 @@
             "notNull": true
           },
           {
-            "fieldPath": "childCreationDate",
+            "fieldPath": "childId",
             "columnName": "child_id",
             "affinity": "INTEGER",
             "notNull": true
@@ -107,12 +107,38 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "preference",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`name` TEXT NOT NULL, `value` TEXT NOT NULL, PRIMARY KEY(`name`))",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "name"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cbf4b17a3293a95471d0dcae87e3fe06')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5c7e8c62ea2660e550aaea26c9da706d')"
     ]
   }
 }
