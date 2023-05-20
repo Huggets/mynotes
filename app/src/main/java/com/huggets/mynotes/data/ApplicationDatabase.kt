@@ -28,7 +28,7 @@ abstract class ApplicationDatabase : RoomDatabase() {
                     context,
                     ApplicationDatabase::class.java,
                     "database"
-                ).build()
+                ).addMigrations(MIGRATION_1_2).build()
             }
 
             return db as ApplicationDatabase
