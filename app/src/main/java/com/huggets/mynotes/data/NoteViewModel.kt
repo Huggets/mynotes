@@ -143,6 +143,7 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.startDocument("UTF-8", true)
 
             serializer.startTag("", "data")
+            serializer.attribute("", "version", "1")
             notesToXml(serializer)
             noteAssociationsToXml(serializer)
             deletedNotesToXml(serializer)
@@ -215,6 +216,13 @@ class NoteViewModel(context: Context) : ViewModel() {
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 if (eventType == XmlPullParser.START_TAG) {
                     when (parser.name) {
+                        "data" -> {
+                            val version = parser.getAttributeValue("", "version").toInt()
+                            if (version != 1) {
+                                throw Exception("Unsupported version")
+                            }
+                        }
+
                         "note" -> {
                             val id = parser.getAttributeValue("", "id").toInt()
                             val title = parser.getAttributeValue("", "title")
