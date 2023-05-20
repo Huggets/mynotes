@@ -34,7 +34,6 @@ import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.find
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditing(
     navigationController: NavHostController,
@@ -178,9 +177,10 @@ fun NoteEditing(
                         enter = swipeInRightTransition,
                         exit = swipeOutLeftTransition,
                     ) {
-                        // TODO Replace deprecated TextFieldDefaults.textFieldColors
-                        val colors = TextFieldDefaults.textFieldColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
+                        val colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            disabledContainerColor = MaterialTheme.colorScheme.surface,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                         )
@@ -391,9 +391,10 @@ private fun AppBar(
 ) {
     TopAppBar(
         title = {
-            // TODO Replace deprecated TextFieldDefaults.textFieldColors
-            val colors = TextFieldDefaults.textFieldColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+            val colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             )
