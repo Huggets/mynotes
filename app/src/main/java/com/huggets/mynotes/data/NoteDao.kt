@@ -14,6 +14,12 @@ interface NoteDao {
     @Query("DELETE FROM note WHERE id = :id")
     suspend fun delete(id: Int): Int
 
+    @Query("DELETE FROM note WHERE creation_date = :creationDate")
+    suspend fun delete(creationDate: Date): Int
+
+    @Query("SELECT * FROM note WHERE id = :id")
+    suspend fun get(id: Int): Note?
+
     @Query("SELECT * FROM note")
     fun getAllNotesFlow(): Flow<List<Note>>
 
@@ -38,4 +44,7 @@ interface NoteDao {
         """
     )
     suspend fun getChildren(id: Int): List<Note>
+
+    @Query("SELECT MAX(note.id) FROM note")
+    suspend fun getGreatestIdUsed(): Int?
 }

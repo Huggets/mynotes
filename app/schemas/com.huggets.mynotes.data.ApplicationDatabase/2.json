@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "5c7e8c62ea2660e550aaea26c9da706d",
+    "identityHash": "0257f98de9d29793a3930b193da791c4",
     "entities": [
       {
         "tableName": "note",
@@ -133,12 +133,32 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "deleted_note",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`creation_date` TEXT NOT NULL, PRIMARY KEY(`creation_date`))",
+        "fields": [
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creation_date",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "creation_date"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5c7e8c62ea2660e550aaea26c9da706d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0257f98de9d29793a3930b193da791c4')"
     ]
   }
 }

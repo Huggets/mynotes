@@ -24,27 +24,22 @@ class NoteViewModel(context: Context) : ViewModel() {
     private val noteRepository = NoteRepository(context)
     private val noteAssociationRepository = NoteAssociationRepository(context)
     private val preferenceRepository = PreferenceRepository(context)
+    private val deletedNoteRepository = DeletedNoteRepository(context)
 
-    private var noteIdGenerator: Int
+    private var noteIdGenerator = 0
 
     private val _uiState = MutableStateFlow(NoteAppUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
+        _uiState.value = _uiState.value.copy(isInitializationFinished = false)
+
         // Default value is 0 but we need to wait for the value to be retrieved from the database
 
         noteIdGenerator = 0
 
         viewModelScope.launch {
-            preferenceRepository.getPreference(PREFERENCES_NOTE_ID_GENERATOR).apply {
-                if (this != null) {
-                    noteIdGenerator = value.toInt()
-                } else {
-                    val preference =
-                        Preference(PREFERENCES_NOTE_ID_GENERATOR, noteIdGenerator.toString())
-                    preferenceRepository.setPreference(preference)
-                }
-            }
+            fetchNoteIdGenerator()
             _uiState.value = _uiState.value.copy(isInitializationFinished = true)
         }
     }
@@ -130,10 +125,14 @@ class NoteViewModel(context: Context) : ViewModel() {
      */
     fun deleteNote(id: Int) {
         viewModelScope.launch {
+            val note = noteRepository.get(id) ?: return@launch
+
             noteRepository.getChildren(id).forEach { child ->
                 noteRepository.delete(child.id)
+                deletedNoteRepository.insert(DeletedNote(child.creationDate))
             }
             noteRepository.delete(id)
+            deletedNoteRepository.insert(DeletedNote(note.creationDate))
         }
     }
 
@@ -146,6 +145,7 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.startTag("", "data")
             notesToXml(serializer)
             noteAssociationsToXml(serializer)
+            deletedNotesToXml(serializer)
             serializer.endTag("", "data")
 
             serializer.endDocument()
@@ -190,6 +190,22 @@ class NoteViewModel(context: Context) : ViewModel() {
         serializer.endTag("", "noteAssociations")
     }
 
+    private suspend fun deletedNotesToXml(serializer: XmlSerializer) {
+        serializer.startTag("", "deletedNotes")
+
+        deletedNoteRepository.getAllDeletedNotes().forEach { deletedNote ->
+            serializer.startTag("", "deletedNote")
+            serializer.attribute(
+                "",
+                "creationDate",
+                deletedNote.creationDate.toString()
+            )
+            serializer.endTag("", "deletedNote")
+        }
+
+        serializer.endTag("", "deletedNotes")
+    }
+
     fun importFromXml(stream: InputStream) {
         viewModelScope.launch(Dispatchers.IO) {
             val parser = Xml.newPullParser()
@@ -223,12 +239,47 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 NoteAssociationItemUiState(parentId, childId).toNoteAssociation()
                             noteAssociationRepository.insert(noteAssociation)
                         }
+
+                        "deletedNote" -> {
+                            val creationDate = Date.fromString(
+                                parser.getAttributeValue("", "creationDate")
+                            )
+
+                            val deletedNote = DeletedNote(creationDate)
+                            deletedNoteRepository.insert(deletedNote)
+                            noteRepository.delete(creationDate)
+                        }
                     }
                 }
                 eventType = parser.next()
             }
 
             stream.close()
+
+            val greatestIdUsed = noteRepository.getGreatestIdUsed() ?: 0
+
+            preferenceRepository.setPreference(
+                Preference(
+                    PREFERENCES_NOTE_ID_GENERATOR,
+                    greatestIdUsed.toString()
+                )
+            )
+
+            fetchNoteIdGenerator()
+        }
+    }
+
+    private suspend fun fetchNoteIdGenerator() {
+        preferenceRepository.getPreference(PREFERENCES_NOTE_ID_GENERATOR).apply {
+            if (this != null) {
+                noteIdGenerator = value.toInt()
+            } else {
+                val preference = Preference(
+                    PREFERENCES_NOTE_ID_GENERATOR,
+                    noteIdGenerator.toString()
+                )
+                preferenceRepository.setPreference(preference)
+            }
         }
     }
 

@@ -97,5 +97,15 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
             SELECT 'note_id_generator', max(id) + 1 FROM note;
             """.trimIndent()
         )
+
+        // Create deleted_note table
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS deleted_note (
+                creation_date TEXT NOT NULL,
+                PRIMARY KEY(creation_date)
+            );
+            """.trimIndent()
+        )
     }
 }
