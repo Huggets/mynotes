@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import com.huggets.mynotes.data.*
 
 @Database(
-    version = 1,
+    version = 2,
     entities = [Note::class, NoteAssociation::class, Preference::class],
     exportSchema = true,
 )
