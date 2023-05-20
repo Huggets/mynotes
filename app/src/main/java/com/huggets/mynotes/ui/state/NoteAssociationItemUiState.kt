@@ -1,16 +1,15 @@
 package com.huggets.mynotes.ui.state
 
-import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.NoteAssociation
 
 data class NoteAssociationItemUiState(
-    val parentCreationDate: Date,
-    val childCreationDate: Date,
+    val parentId: Int,
+    val childId: Int,
 ) {
     constructor(noteAssociation: NoteAssociation) : this(
-        noteAssociation.parentCreationDate,
-        noteAssociation.childCreationDate,
+        noteAssociation.parentId,
+        noteAssociation.childId,
     )
 
-    fun toNoteAssociation() = NoteAssociation(parentCreationDate, childCreationDate)
+    fun toNoteAssociation() = NoteAssociation(parentId, childId)
 }

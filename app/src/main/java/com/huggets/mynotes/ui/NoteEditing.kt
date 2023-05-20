@@ -39,11 +39,10 @@ import com.huggets.mynotes.ui.state.find
 fun NoteEditing(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    noteCreationDate: Date,
-    parentNoteCreationDate: Date?,
-    createNote: (Date, Date?) -> Unit,
-    saveNote: (NoteItemUiState, Date?) -> Unit,
-    deleteNote: (Date) -> Unit,
+    noteId: Int,
+    createNote: (parentId: Int?) -> Int,
+    saveNote: (NoteItemUiState) -> Unit,
+    deleteNote: (noteId: Int) -> Unit,
     isNew: Boolean,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
@@ -57,7 +56,7 @@ fun NoteEditing(
         } else {
             if (isNew) {
                 // The note is not kept and must be deleted
-                deleteNote(noteCreationDate)
+                deleteNote(noteId)
                 isDeleted = true
             }
             navigationController.popBackStack()
@@ -85,7 +84,7 @@ fun NoteEditing(
         }
     }
 
-    val note = appState.value.allNotes.find(noteCreationDate)
+    val note = appState.value.allNotes.find(noteId)
 
     if (isDeleted || note == null) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -97,11 +96,12 @@ fun NoteEditing(
         val saveChanges: () -> Unit = {
             saveNote(
                 NoteItemUiState(
+                    note.id,
                     title.value,
                     content.value,
                     note.creationDate,
                     Date.getCurrentTime(),
-                ), parentNoteCreationDate
+                )
             )
         }
         val saveAndPopBackStack: () -> Unit = {
@@ -115,7 +115,7 @@ fun NoteEditing(
         ConfirmationDialog(
             displayDialog = showDeleteConfirmation,
             onConfirmation = {
-                deleteNote(noteCreationDate)
+                deleteNote(noteId)
                 isDeleted = true
                 navigationController.popBackStack()
             },
@@ -126,7 +126,7 @@ fun NoteEditing(
             onConfirmation = {
                 if (isNew) {
                     // The note is not kept and must be deleted
-                    deleteNote(noteCreationDate)
+                    deleteNote(noteId)
                     isDeleted = true
                 }
                 navigationController.popBackStack()
@@ -178,6 +178,7 @@ fun NoteEditing(
                         enter = swipeInRightTransition,
                         exit = swipeOutLeftTransition,
                     ) {
+                        // TODO Replace deprecated TextFieldDefaults.textFieldColors
                         val colors = TextFieldDefaults.textFieldColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                             focusedIndicatorColor = Color.Transparent,
@@ -205,13 +206,13 @@ fun NoteEditing(
                             mutableListOf()
 
                         appState.value.noteAssociations.forEach {
-                            if (it.parentCreationDate == note.creationDate) {
+                            if (it.parentId == note.id) {
                                 associatedNotes += it
                             }
                         }
 
                         AssociatedNotes(
-                            parentCreationDate = noteCreationDate,
+                            parentId = noteId,
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
                             navigationController = navigationController,
@@ -295,27 +296,26 @@ private fun Tab(
 
 @Composable
 private fun AssociatedNotes(
-    parentCreationDate: Date,
+    parentId: Int,
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
     navigationController: NavHostController,
-    createNote: (Date, Date?) -> Unit,
+    createNote: (parentId: Int?) -> Int,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
         modifier = modifier,
     ) {
-        item(Date(0, 0, 0, 0, 0, 0, 0).hashCode()) {
+        item(0) {
             Button(
                 onClick = {
-                    val creationDate = Date.getCurrentTime()
-
                     // Create and edit the new note
-                    createNote(creationDate, parentCreationDate)
+
+                    val newNoteId = createNote(parentId)
 
                     navigationController.navigate(
-                        Destinations.generateEditNote(creationDate, parentCreationDate, true)
+                        Destinations.generateEditNote(newNoteId, parentId, true)
                     )
                 },
                 shape = ShapeDefaults.Small,
@@ -325,16 +325,16 @@ private fun AssociatedNotes(
             }
         }
         for (associatedNote in associatedNotes) {
-            notes.find(associatedNote.childCreationDate)?.let { note ->
-                item(associatedNote.childCreationDate.hashCode()) {
+            notes.find(associatedNote.childId)?.let { note ->
+                item(associatedNote.childId) {
                     AssociatedNoteElement(
                         text = note.title,
                         onClick = {
                             // Open the associated note
                             navigationController.navigate(
                                 Destinations.generateEditNote(
-                                    note.creationDate,
-                                    parentCreationDate,
+                                    note.id,
+                                    parentId,
                                     false,
                                 )
                             )
@@ -391,6 +391,7 @@ private fun AppBar(
 ) {
     TopAppBar(
         title = {
+            // TODO Replace deprecated TextFieldDefaults.textFieldColors
             val colors = TextFieldDefaults.textFieldColors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 focusedIndicatorColor = Color.Transparent,

@@ -10,7 +10,7 @@ class NoteRepository(context: Context) {
 
     suspend fun update(note: Note) = noteDao.update(note)
 
-    suspend fun delete(noteCreationDate: Date) = noteDao.delete(noteCreationDate) > 0
+    suspend fun delete(id: Int) = noteDao.delete(id) > 0
 
     fun syncAllNotes() = noteDao.getAllNotesFlow()
 
@@ -21,5 +21,5 @@ class NoteRepository(context: Context) {
     /**
      * Get all children of a note recursively
      */
-    suspend fun getChildren(parentCreationDate: Date) = noteDao.getChildren(parentCreationDate)
+    suspend fun getChildren(id: Int) = noteDao.getChildren(id)
 }

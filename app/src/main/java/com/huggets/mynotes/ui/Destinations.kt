@@ -1,11 +1,10 @@
 package com.huggets.mynotes.ui
 
-import com.huggets.mynotes.data.Date
-
 object Destinations {
     object ParametersName {
-        const val noteCreationDate = "noteCreationDate"
-        const val parentNoteCreationDate = "parentCreationDate"
+        const val noteId = "noteId"
+        // TODO Maybe remove this parameter
+        const val parentId = "parentId"
     }
 
     private const val viewNoteList = "viewNoteList"
@@ -14,9 +13,9 @@ object Destinations {
 
     const val viewNoteListRoute = viewNoteList
     const val newNoteRoute =
-        "$newNote/{${ParametersName.noteCreationDate}}?${ParametersName.parentNoteCreationDate}={${ParametersName.parentNoteCreationDate}}"
+        "$newNote/{${ParametersName.noteId}}?${ParametersName.parentId}={${ParametersName.parentId}}"
     const val editNoteRoute =
-        "$editNote/{${ParametersName.noteCreationDate}}?${ParametersName.parentNoteCreationDate}={${ParametersName.parentNoteCreationDate}}"
+        "$editNote/{${ParametersName.noteId}}?${ParametersName.parentId}={${ParametersName.parentId}}"
 
     /**
      * Generate a route to the view note list destination
@@ -26,24 +25,24 @@ object Destinations {
     /**
      * Generate a route to the edit note destination.
      *
-     * @param noteCreationDate The creation date of the note to edit.
-     * @param parentCreationDate If parentCreationDate is null, then the note will be a root note,
+     * @param noteId The id of the note to edit.
+     * @param parentId If parentId is null, then the note will be a root note,
      * otherwise it will be associated to the parent note.
      * @param isNew If the note is a new note or an existing one.
      */
     fun generateEditNote(
-        noteCreationDate: Date,
-        parentCreationDate: Date?,
+        noteId: Int,
+        parentId: Int?,
         isNew: Boolean,
     ): String {
         val parent: String? =
-            if (parentCreationDate == null) null
-            else "${ParametersName.parentNoteCreationDate}=$parentCreationDate"
+            if (parentId == null) null
+            else "${ParametersName.parentId}=$parentId"
 
         return if (isNew) {
-            "$newNote/$noteCreationDate?$parent"
+            "$newNote/$noteId?$parent"
         } else {
-            "$editNote/$noteCreationDate?$parent"
+            "$editNote/$noteId?$parent"
         }
     }
 }

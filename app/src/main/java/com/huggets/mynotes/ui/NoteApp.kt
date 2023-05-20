@@ -2,7 +2,6 @@ package com.huggets.mynotes.ui
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -18,16 +17,13 @@ import androidx.navigation.NavBackStackEntry
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
-import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
 import com.huggets.mynotes.ui.Value.Animation
 import com.huggets.mynotes.ui.Value.Animation.slideOffset
 import com.huggets.mynotes.ui.state.NoteItemUiState
 
-@OptIn(ExperimentalMaterial3Api::class)
 private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
-
     override fun restore(value: Boolean): FabPosition {
         return if (value) FabPosition.Center else FabPosition.End
     }
@@ -35,10 +31,9 @@ private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
     override fun SaverScope.save(value: FabPosition): Boolean {
         return value == FabPosition.Center
     }
-
 }
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NoteApp(
     quitApplication: () -> Unit,
@@ -158,14 +153,14 @@ fun NoteApp(
             }
         }
 
-    val createNote: (Date, Date?) -> Unit = { creationDate, parentCreationDate ->
-        noteViewModel.createNote(creationDate, parentCreationDate)
+    val createNote: (parentId: Int?) -> Int = { parentId ->
+        noteViewModel.createNote(parentId)
     }
-    val updateNote: (NoteItemUiState, Date?) -> Unit = { note, _ ->
+    val updateNote: (NoteItemUiState) -> Unit = { note ->
         noteViewModel.updateNote(note)
     }
-    val deleteNote: (Date) -> Unit = {
-        noteViewModel.deleteNote(it)
+    val deleteNote: (noteId: Int) -> Unit = { noteId ->
+        noteViewModel.deleteNote(noteId)
     }
 
     noteViewModel.syncUiState()
@@ -181,9 +176,9 @@ fun NoteApp(
                     popEnterTransition = viewListPopEnterTransition,
                     exitTransition = viewListExitTransition,
                 ) {
-                    val deleteNotes: (List<Date>) -> Unit = { noteCreationDates ->
-                        for (creationDate in noteCreationDates) {
-                            noteViewModel.deleteNote(creationDate)
+                    val deleteNotes: (noteIds: List<Int>) -> Unit = { noteIds ->
+                        for (id in noteIds) {
+                            noteViewModel.deleteNote(id)
                         }
                     }
                     NoteList(
@@ -205,18 +200,14 @@ fun NoteApp(
                     popExitTransition = editNotePopExitTransition,
                     popEnterTransition = editNotePopEnterTransition,
                 ) { backStackEntry ->
-                    val noteCreationDate = Date.fromString(
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteCreationDate)!!
-                    )
-                    val parentCreationDate =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteCreationDate)
-                            ?.let { Date.fromString(it) }
+                    val noteId =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
+                            .toInt()
 
                     NoteEditing(
                         navigationController,
                         appState,
-                        noteCreationDate,
-                        parentCreationDate,
+                        noteId,
                         createNote,
                         updateNote,
                         deleteNote,
@@ -230,18 +221,14 @@ fun NoteApp(
                     popExitTransition = editNotePopExitTransition,
                     popEnterTransition = editNotePopEnterTransition,
                 ) { backStackEntry ->
-                    val noteCreationDate = Date.fromString(
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteCreationDate)!!
-                    )
-                    val parentCreationDate =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.parentNoteCreationDate)
-                            ?.let { Date.fromString(it) }
+                    val noteId =
+                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
+                            .toInt()
 
                     NoteEditing(
                         navigationController,
                         appState,
-                        noteCreationDate,
-                        parentCreationDate,
+                        noteId,
                         createNote,
                         updateNote,
                         deleteNote,

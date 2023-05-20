@@ -1,6 +1,7 @@
 package com.huggets.mynotes.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Xml
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -19,10 +20,15 @@ import org.xmlpull.v1.XmlSerializer
 import java.io.InputStream
 import java.io.OutputStream
 
-class NoteViewModel(context: Context) : ViewModel() {
+class NoteViewModel(
+    context: Context,
+    private val preferences: SharedPreferences,
+) : ViewModel() {
 
     private val noteRepository = NoteRepository(context)
     private val noteAssociationRepository = NoteAssociationRepository(context)
+
+    private var noteIdGenerator: Int = preferences.getInt(PREFERENCES_NOTE_ID_GENERATOR_KEY, 0)
 
     private val _uiState = MutableStateFlow(NoteAppUiState())
     val uiState = _uiState.asStateFlow()
@@ -42,13 +48,13 @@ class NoteViewModel(context: Context) : ViewModel() {
 
         viewModelScope.launch {
             noteRepository.syncMainNotes().collect {
-                val list = mutableListOf<Date>()
+                val list = mutableListOf<Int>()
 
-                it.forEach { creationDate ->
-                    list.add(creationDate)
+                it.forEach { id ->
+                    list.add(id)
                 }
 
-                _uiState.value = _uiState.value.copy(mainNoteCreationDates = list)
+                _uiState.value = _uiState.value.copy(mainNoteIds = list)
             }
         }
 
@@ -65,11 +71,6 @@ class NoteViewModel(context: Context) : ViewModel() {
         }
     }
 
-    /**
-     * Updates the note in the database.
-     *
-     * If a parent note creation date is not null, the note will be associated with this parent note.
-     */
     fun updateNote(note: NoteItemUiState) {
         viewModelScope.launch {
             noteRepository.update(note.toNote())
@@ -80,22 +81,29 @@ class NoteViewModel(context: Context) : ViewModel() {
      * Creates a new note in the database.
      *
      * If a parent note id is not null, the note will be associated with this parent note.
+     *
+     * @return the id of the new note
      */
-    fun createNote(creationDate: Date, parentNoteCreationDate: Date?) {
+    fun createNote(parentId: Int?): Int {
+        val newId = generateNewNoteId()
+
         viewModelScope.launch {
-            val newNote = Note("", "", creationDate, creationDate)
+            val currentDate = Date.getCurrentTime()
+            val newNote = Note(newId, "", "", currentDate, currentDate)
 
             noteRepository.insert(newNote)
-            associateNote(creationDate, parentNoteCreationDate)
+            associateNote(newId, parentId)
         }
+
+        return newId
     }
 
-    private suspend fun associateNote(creationDate: Date, parentNoteCreationDate: Date?) {
-        if (parentNoteCreationDate != null) {
+    private suspend fun associateNote(id: Int, parentId: Int?) {
+        if (parentId != null) {
             noteAssociationRepository.insert(
                 NoteAssociationItemUiState(
-                    parentNoteCreationDate,
-                    creationDate,
+                    parentId,
+                    id,
                 ).toNoteAssociation()
             )
         }
@@ -104,12 +112,12 @@ class NoteViewModel(context: Context) : ViewModel() {
     /**
      * Deletes a note and all its children
      */
-    fun deleteNote(creationDate: Date) {
+    fun deleteNote(id: Int) {
         viewModelScope.launch {
-            noteRepository.getChildren(creationDate).forEach { child ->
-                noteRepository.delete(child.creationDate)
+            noteRepository.getChildren(id).forEach { child ->
+                noteRepository.delete(child.id)
             }
-            noteRepository.delete(creationDate)
+            noteRepository.delete(id)
         }
     }
 
@@ -134,6 +142,7 @@ class NoteViewModel(context: Context) : ViewModel() {
 
         noteRepository.getAllNotes().forEach { note ->
             serializer.startTag("", "note")
+            serializer.attribute("", "id", note.id.toString())
             serializer.attribute("", "title", note.title)
             serializer.attribute("", "content", note.content)
             serializer.attribute("", "creationDate", note.creationDate.toString())
@@ -151,13 +160,13 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.startTag("", "noteAssociation")
             serializer.attribute(
                 "",
-                "parentCreationDate",
-                noteAssociation.parentCreationDate.toString()
+                "parentId",
+                noteAssociation.parentId.toString()
             )
             serializer.attribute(
                 "",
-                "childCreationDate",
-                noteAssociation.childCreationDate.toString()
+                "childId",
+                noteAssociation.childId.toString()
             )
             serializer.endTag("", "noteAssociation")
         }
@@ -175,6 +184,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                 if (eventType == XmlPullParser.START_TAG) {
                     when (parser.name) {
                         "note" -> {
+                            val id = parser.getAttributeValue("", "id").toInt()
                             val title = parser.getAttributeValue("", "title")
                             val content = parser.getAttributeValue("", "content")
                             val creationDate = Date.fromString(
@@ -184,23 +194,17 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 parser.getAttributeValue("", "lastEditTime")
                             )
 
-                            val note = NoteItemUiState(title, content, creationDate, lastEditTime)
+                            val note =
+                                NoteItemUiState(id, title, content, creationDate, lastEditTime)
                             noteRepository.insert(note.toNote())
                         }
 
                         "noteAssociation" -> {
-                            val parentCreationDate = Date.fromString(
-                                parser.getAttributeValue("", "parentCreationDate")
-                            )
-                            val childCreationDate = Date.fromString(
-                                parser.getAttributeValue("", "childCreationDate")
-                            )
+                            val parentId = parser.getAttributeValue("", "parentId").toInt()
+                            val childId = parser.getAttributeValue("", "childId").toInt()
 
                             val noteAssociation =
-                                NoteAssociationItemUiState(
-                                    parentCreationDate,
-                                    childCreationDate,
-                                ).toNoteAssociation()
+                                NoteAssociationItemUiState(parentId, childId).toNoteAssociation()
                             noteAssociationRepository.insert(noteAssociation)
                         }
                     }
@@ -212,12 +216,29 @@ class NoteViewModel(context: Context) : ViewModel() {
         }
     }
 
+    private fun generateNewNoteId(): Int {
+        val newId = ++noteIdGenerator
+
+        with(preferences.edit()) {
+            putInt(PREFERENCES_NOTE_ID_GENERATOR_KEY, noteIdGenerator)
+            apply()
+        }
+
+        return newId
+    }
+
     companion object {
+        private const val PREFERENCES_FILE_NAME = "com.huggets.mynotes.preferences"
+        private const val PREFERENCES_NOTE_ID_GENERATOR_KEY = "note_id_generator"
+
         @Suppress("UNCHECKED_CAST")
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val application = checkNotNull(extras[APPLICATION_KEY])
-                return NoteViewModel(application) as? T
+                val preferences =
+                    application.getSharedPreferences(PREFERENCES_FILE_NAME, Context.MODE_PRIVATE)
+
+                return NoteViewModel(application, preferences) as? T
                     ?: throw IllegalArgumentException("Unknown ViewModel class")
             }
         }

@@ -7,27 +7,27 @@ import androidx.room.Index
 
 @Entity(
     tableName = "note_association",
-    primaryKeys = ["parent_creation_date", "child_creation_date"],
+    primaryKeys = ["parent_id", "child_id"],
     foreignKeys = [
         ForeignKey(
             entity = Note::class,
-            parentColumns = ["creation_date"],
-            childColumns = ["parent_creation_date"],
+            parentColumns = ["id"],
+            childColumns = ["parent_id"],
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = Note::class,
-            parentColumns = ["creation_date"],
-            childColumns = ["child_creation_date"],
+            parentColumns = ["id"],
+            childColumns = ["child_id"],
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("child_creation_date")],
+    indices = [Index("child_id")],
 )
 data class NoteAssociation(
-    @ColumnInfo(name = "parent_creation_date")
-    var parentCreationDate: Date,
+    @ColumnInfo(name = "parent_id")
+    var parentId: Int,
 
-    @ColumnInfo(name = "child_creation_date")
-    var childCreationDate: Date,
+    @ColumnInfo(name = "child_id")
+    var childId: Int,
 )
