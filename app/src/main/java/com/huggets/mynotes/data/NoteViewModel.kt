@@ -256,6 +256,14 @@ class NoteViewModel(context: Context) : ViewModel() {
 
             stream.close()
 
+            // Remove all deleted notes that have been restored due to the import
+
+            noteRepository.getAllNotes().forEach { note ->
+                deletedNoteRepository.delete(note.creationDate)
+            }
+
+            // Update note id generator
+
             val greatestIdUsed = noteRepository.getGreatestIdUsed() ?: 0
 
             preferenceRepository.setPreference(

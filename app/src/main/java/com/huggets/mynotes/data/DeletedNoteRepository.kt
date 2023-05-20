@@ -7,5 +7,7 @@ class DeletedNoteRepository(context: Context) {
 
     suspend fun insert(deletedNote: DeletedNote) = deletedNoteDao.insert(deletedNote)
 
+    suspend fun delete(creationDate: Date) = deletedNoteDao.delete(creationDate)
+
     suspend fun getAllDeletedNotes() = deletedNoteDao.getAllDeletedNotes()
 }
