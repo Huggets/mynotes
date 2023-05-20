@@ -2,18 +2,12 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "5c7e8c62ea2660e550aaea26c9da706d",
+    "identityHash": "baa535ffb7b7745016301e8e9ce6aefa",
     "entities": [
       {
         "tableName": "note",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `content` TEXT NOT NULL, `creation_date` TEXT NOT NULL, `last_edit_time` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`title` TEXT NOT NULL, `content` TEXT NOT NULL, `creation_date` TEXT NOT NULL, `last_edit_time` TEXT NOT NULL, PRIMARY KEY(`creation_date`))",
         "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
           {
             "fieldPath": "title",
             "columnName": "title",
@@ -42,7 +36,7 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "id"
+            "creation_date"
           ]
         },
         "indices": [],
@@ -50,37 +44,37 @@
       },
       {
         "tableName": "note_association",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`parent_id` INTEGER NOT NULL, `child_id` INTEGER NOT NULL, PRIMARY KEY(`parent_id`, `child_id`), FOREIGN KEY(`parent_id`) REFERENCES `note`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`child_id`) REFERENCES `note`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`parent_creation_date` TEXT NOT NULL, `child_creation_date` TEXT NOT NULL, PRIMARY KEY(`parent_creation_date`, `child_creation_date`), FOREIGN KEY(`parent_creation_date`) REFERENCES `note`(`creation_date`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`child_creation_date`) REFERENCES `note`(`creation_date`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
-            "fieldPath": "parentId",
-            "columnName": "parent_id",
-            "affinity": "INTEGER",
+            "fieldPath": "parentCreationDate",
+            "columnName": "parent_creation_date",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "childId",
-            "columnName": "child_id",
-            "affinity": "INTEGER",
+            "fieldPath": "childCreationDate",
+            "columnName": "child_creation_date",
+            "affinity": "TEXT",
             "notNull": true
           }
         ],
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "parent_id",
-            "child_id"
+            "parent_creation_date",
+            "child_creation_date"
           ]
         },
         "indices": [
           {
-            "name": "index_note_association_child_id",
+            "name": "index_note_association_child_creation_date",
             "unique": false,
             "columnNames": [
-              "child_id"
+              "child_creation_date"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_note_association_child_id` ON `${TABLE_NAME}` (`child_id`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_note_association_child_creation_date` ON `${TABLE_NAME}` (`child_creation_date`)"
           }
         ],
         "foreignKeys": [
@@ -89,10 +83,10 @@
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "parent_id"
+              "parent_creation_date"
             ],
             "referencedColumns": [
-              "id"
+              "creation_date"
             ]
           },
           {
@@ -100,45 +94,19 @@
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "child_id"
+              "child_creation_date"
             ],
             "referencedColumns": [
-              "id"
+              "creation_date"
             ]
           }
         ]
-      },
-      {
-        "tableName": "preference",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`name` TEXT NOT NULL, `value` TEXT NOT NULL, PRIMARY KEY(`name`))",
-        "fields": [
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "value",
-            "columnName": "value",
-            "affinity": "TEXT",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "name"
-          ]
-        },
-        "indices": [],
-        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5c7e8c62ea2660e550aaea26c9da706d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'baa535ffb7b7745016301e8e9ce6aefa')"
     ]
   }
 }
