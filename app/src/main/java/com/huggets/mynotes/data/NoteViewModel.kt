@@ -209,6 +209,8 @@ class NoteViewModel(context: Context) : ViewModel() {
     }
 
     fun importFromXml(stream: InputStream) {
+        _uiState.value = _uiState.value.copy(isImporting = true)
+
         viewModelScope.launch(Dispatchers.IO) {
             val parser = Xml.newPullParser()
             parser.setInput(stream, "UTF-8")
@@ -292,6 +294,8 @@ class NoteViewModel(context: Context) : ViewModel() {
             )
 
             fetchNoteIdGenerator()
+
+            _uiState.value = _uiState.value.copy(isImporting = false)
         }
     }
 

@@ -5,4 +5,5 @@ data class NoteAppUiState(
     val mainNoteIds: List<Int> = listOf(),
     val noteAssociations: List<NoteAssociationItemUiState> = listOf(),
     val isInitializationFinished: Boolean = false,
+    val isImporting: Boolean = false,
 )

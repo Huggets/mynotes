@@ -214,10 +214,10 @@ private fun NoteElementList(
         }
     }
 
-    if (!appState.value.isInitializationFinished) {
+    if (!appState.value.isInitializationFinished || appState.value.isImporting) {
         Box(
             modifier = modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(Value.smallPadding)
         ) {
             CircularProgressIndicator(
