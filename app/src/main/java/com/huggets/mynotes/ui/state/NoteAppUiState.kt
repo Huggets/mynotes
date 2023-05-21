@@ -6,4 +6,6 @@ data class NoteAppUiState(
     val noteAssociations: List<NoteAssociationItemUiState> = listOf(),
     val isInitializationFinished: Boolean = false,
     val isImporting: Boolean = false,
+    val importFailed: Boolean = false,
+    val importFailedMessage: String = "",
 )

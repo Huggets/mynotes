@@ -139,6 +139,19 @@ fun NoteList(
             floatingActionButtonPosition = fabPosition.value,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { padding ->
+            var snackbarWasShown by rememberSaveable { mutableStateOf(false) }
+
+            if (appState.value.isImporting) {
+                snackbarWasShown = false
+            }
+
+            if (appState.value.importFailed && !snackbarWasShown) {
+                LaunchedEffect(snackbarHostState) {
+                    snackbarHostState.showSnackbar(appState.value.importFailedMessage)
+                    snackbarWasShown = true
+                }
+            }
+
             NoteElementList(
                 navigationController,
                 appState,
