@@ -11,4 +11,7 @@ class NoteAssociationRepository(context: Context) {
 
     suspend fun insert(vararg noteAssociations: NoteAssociation) =
         noteAssociationDao.insert(*noteAssociations)
+
+    suspend fun deleteByChildCreationDate(childCreationDate: Date) =
+        noteAssociationDao.deleteByChildCreationDate(childCreationDate)
 }

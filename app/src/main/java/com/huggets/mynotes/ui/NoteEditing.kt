@@ -38,10 +38,10 @@ import com.huggets.mynotes.ui.state.find
 fun NoteEditing(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
-    noteId: Int,
-    createNote: (parentId: Int?) -> Int,
+    noteCreationDate: Date,
+    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
     saveNote: (NoteItemUiState) -> Unit,
-    deleteNote: (noteId: Int) -> Unit,
+    deleteNote: (noteCreationDate: Date) -> Unit,
     isNew: Boolean,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
@@ -55,7 +55,7 @@ fun NoteEditing(
         } else {
             if (isNew) {
                 // The note is not kept and must be deleted
-                deleteNote(noteId)
+                deleteNote(noteCreationDate)
                 isDeleted = true
             }
             navigationController.popBackStack()
@@ -83,7 +83,7 @@ fun NoteEditing(
         }
     }
 
-    val note = appState.value.allNotes.find(noteId)
+    val note = appState.value.allNotes.find(noteCreationDate)
 
     if (isDeleted || note == null) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -95,7 +95,6 @@ fun NoteEditing(
         val saveChanges: () -> Unit = {
             saveNote(
                 NoteItemUiState(
-                    note.id,
                     title.value,
                     content.value,
                     note.creationDate,
@@ -114,7 +113,7 @@ fun NoteEditing(
         ConfirmationDialog(
             displayDialog = showDeleteConfirmation,
             onConfirmation = {
-                deleteNote(noteId)
+                deleteNote(noteCreationDate)
                 isDeleted = true
                 navigationController.popBackStack()
             },
@@ -125,7 +124,7 @@ fun NoteEditing(
             onConfirmation = {
                 if (isNew) {
                     // The note is not kept and must be deleted
-                    deleteNote(noteId)
+                    deleteNote(noteCreationDate)
                     isDeleted = true
                 }
                 navigationController.popBackStack()
@@ -145,7 +144,9 @@ fun NoteEditing(
             },
         ) { paddingValues ->
             Column(
-                Modifier.padding(paddingValues).fillMaxWidth(),
+                Modifier
+                    .padding(paddingValues)
+                    .fillMaxWidth(),
             ) {
                 val index = rememberSaveable { mutableStateOf(0) }
 
@@ -206,13 +207,13 @@ fun NoteEditing(
                             mutableListOf()
 
                         appState.value.noteAssociations.forEach {
-                            if (it.parentId == note.id) {
+                            if (it.parentCreationDate == note.creationDate) {
                                 associatedNotes += it
                             }
                         }
 
                         AssociatedNotes(
-                            parentId = noteId,
+                            parentCreationDate = noteCreationDate,
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
                             navigationController = navigationController,
@@ -271,7 +272,7 @@ private fun Tab(
                 Modifier
                     .wrapContentSize(align = Alignment.BottomStart)
                     .offset(x = indicatorStart)
-                    .width(indicatorEnd - indicatorStart)
+                    .width(indicatorEnd - indicatorStart),
             )
         }
     ) {
@@ -282,7 +283,8 @@ private fun Tab(
                 editingVisibilityState.targetState = true
                 associationVisibilityState.targetState = false
             },
-            text = { Text("Edit") })
+            text = { Text("Edit") },
+        )
         Tab(
             selected = index.value == 1,
             onClick = {
@@ -290,17 +292,18 @@ private fun Tab(
                 editingVisibilityState.targetState = false
                 associationVisibilityState.targetState = true
             },
-            text = { Text("View associated notes") })
+            text = { Text("View associated notes") },
+        )
     }
 }
 
 @Composable
 private fun AssociatedNotes(
-    parentId: Int,
+    parentCreationDate: Date,
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
     navigationController: NavHostController,
-    createNote: (parentId: Int?) -> Int,
+    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -311,12 +314,10 @@ private fun AssociatedNotes(
             Button(
                 onClick = {
                     // Create and edit the new note
-
-                    val newNoteId = createNote(parentId)
-
-                    navigationController.navigate(
-                        Destinations.generateEditNote(newNoteId, parentId, true)
-                    )
+                    createNote(parentCreationDate) { newNoteCreationDate ->
+                        val destination = Destinations.generateEditNote(newNoteCreationDate, true)
+                        navigationController.navigate(destination)
+                    }
                 },
                 shape = ShapeDefaults.Small,
                 modifier = Modifier.fillMaxWidth(),
@@ -325,16 +326,15 @@ private fun AssociatedNotes(
             }
         }
         for (associatedNote in associatedNotes) {
-            notes.find(associatedNote.childId)?.let { note ->
-                item(associatedNote.childId) {
+            notes.find(associatedNote.childCreationDate)?.let { note ->
+                item(associatedNote.childCreationDate.hashCode()) {
                     AssociatedNoteElement(
                         text = note.title,
                         onClick = {
                             // Open the associated note
                             navigationController.navigate(
                                 Destinations.generateEditNote(
-                                    note.id,
-                                    parentId,
+                                    note.creationDate,
                                     false,
                                 )
                             )

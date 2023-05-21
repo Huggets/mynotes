@@ -1,0 +1,119 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "94bc157ca3960a542025eba37e631edd",
+    "entities": [
+      {
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [],
+        "tableName": "note",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`title` TEXT NOT NULL, `content` TEXT NOT NULL, `creation_date` TEXT NOT NULL, `last_edit_time` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creation_date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastEditTime",
+            "columnName": "last_edit_time",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "note_association",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`parent_creation_date` TEXT NOT NULL, `child_creation_date` TEXT NOT NULL, PRIMARY KEY(`parent_creation_date`, `child_creation_date`))",
+        "fields": [
+          {
+            "fieldPath": "parentCreationDate",
+            "columnName": "parent_creation_date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childCreationDate",
+            "columnName": "child_creation_date",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "parent_creation_date",
+            "child_creation_date"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_note_association_child_creation_date",
+            "unique": false,
+            "columnNames": [
+              "child_creation_date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_note_association_child_creation_date` ON `${TABLE_NAME}` (`child_creation_date`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "deleted_note",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`creation_date` TEXT NOT NULL, PRIMARY KEY(`creation_date`))",
+        "fields": [
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creation_date",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "creation_date"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '94bc157ca3960a542025eba37e631edd')"
+    ]
+  }
+}

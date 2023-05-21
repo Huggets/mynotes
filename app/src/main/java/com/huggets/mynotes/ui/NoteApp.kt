@@ -1,5 +1,6 @@
 package com.huggets.mynotes.ui
 
+import android.os.Bundle
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.material3.FabPosition
@@ -17,6 +18,7 @@ import androidx.navigation.NavBackStackEntry
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
+import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
 import com.huggets.mynotes.ui.Value.Animation
@@ -32,6 +34,10 @@ private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
         return value == FabPosition.Center
     }
 }
+
+private fun getCreationDate(backStackEntryArgument: Bundle) = Date.fromString(
+    backStackEntryArgument.getString(Destinations.ParametersName.noteCreationDate)!!
+)
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -153,14 +159,15 @@ fun NoteApp(
             }
         }
 
-    val createNote: (parentId: Int?) -> Int = { parentId ->
-        noteViewModel.createNote(parentId)
-    }
+    val createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit =
+        { parentCreationDate, onCreationDone ->
+            noteViewModel.createNote(parentCreationDate, onCreationDone)
+        }
     val updateNote: (NoteItemUiState) -> Unit = { note ->
         noteViewModel.updateNote(note)
     }
-    val deleteNote: (noteId: Int) -> Unit = { noteId ->
-        noteViewModel.deleteNote(noteId)
+    val deleteNote: (creationDate: Date) -> Unit = { creationDate ->
+        noteViewModel.deleteNote(creationDate)
     }
 
     noteViewModel.syncUiState()
@@ -176,11 +183,12 @@ fun NoteApp(
                     popEnterTransition = viewListPopEnterTransition,
                     exitTransition = viewListExitTransition,
                 ) {
-                    val deleteNotes: (noteIds: List<Int>) -> Unit = { noteIds ->
-                        for (id in noteIds) {
-                            noteViewModel.deleteNote(id)
+                    val deleteNotes: (noteCreationDates: List<Date>) -> Unit =
+                        { noteCreationDates ->
+                            for (creationDate in noteCreationDates) {
+                                noteViewModel.deleteNote(creationDate)
+                            }
                         }
-                    }
                     NoteList(
                         quitApplication,
                         navigationController,
@@ -200,14 +208,12 @@ fun NoteApp(
                     popExitTransition = editNotePopExitTransition,
                     popEnterTransition = editNotePopEnterTransition,
                 ) { backStackEntry ->
-                    val noteId =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
-                            .toInt()
+                    val noteCreationDate = getCreationDate(backStackEntry.arguments!!)
 
                     NoteEditing(
                         navigationController,
                         appState,
-                        noteId,
+                        noteCreationDate,
                         createNote,
                         updateNote,
                         deleteNote,
@@ -221,14 +227,12 @@ fun NoteApp(
                     popExitTransition = editNotePopExitTransition,
                     popEnterTransition = editNotePopEnterTransition,
                 ) { backStackEntry ->
-                    val noteId =
-                        backStackEntry.arguments?.getString(Destinations.ParametersName.noteId)!!
-                            .toInt()
+                    val noteCreationDate = getCreationDate(backStackEntry.arguments!!)
 
                     NoteEditing(
                         navigationController,
                         appState,
-                        noteId,
+                        noteCreationDate,
                         createNote,
                         updateNote,
                         deleteNote,

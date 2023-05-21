@@ -23,26 +23,10 @@ class NoteViewModel(context: Context) : ViewModel() {
 
     private val noteRepository = NoteRepository(context)
     private val noteAssociationRepository = NoteAssociationRepository(context)
-    private val preferenceRepository = PreferenceRepository(context)
     private val deletedNoteRepository = DeletedNoteRepository(context)
-
-    private var noteIdGenerator = 0
 
     private val _uiState = MutableStateFlow(NoteAppUiState())
     val uiState = _uiState.asStateFlow()
-
-    init {
-        _uiState.value = _uiState.value.copy(isInitializationFinished = false)
-
-        // Default value is 0 but we need to wait for the value to be retrieved from the database
-
-        noteIdGenerator = 0
-
-        viewModelScope.launch {
-            updateNoteIdGenerator()
-            _uiState.value = _uiState.value.copy(isInitializationFinished = true)
-        }
-    }
 
     fun syncUiState() {
         viewModelScope.launch {
@@ -59,13 +43,13 @@ class NoteViewModel(context: Context) : ViewModel() {
 
         viewModelScope.launch {
             noteRepository.syncMainNotes().collect {
-                val list = mutableListOf<Int>()
+                val list = mutableListOf<Date>()
 
-                it.forEach { id ->
-                    list.add(id)
+                it.forEach { creationDate ->
+                    list.add(creationDate)
                 }
 
-                _uiState.value = _uiState.value.copy(mainNoteIds = list)
+                _uiState.value = _uiState.value.copy(mainNoteCreationDates = list)
             }
         }
 
@@ -89,51 +73,47 @@ class NoteViewModel(context: Context) : ViewModel() {
     }
 
     /**
-     * Creates a new note in the database.
+     * Start the creation of a new note in the database.
      *
-     * If a parent note id is not null, the note will be associated with this parent note.
+     * If a parent note's creation date is not null, the note will be associated with this parent note.
      *
-     * @return the id of the new note
+     * @param parentCreationDate The creation date of the parent note, if any.
+     * @param onCreationDone Callback called when the creation is done.
      */
-    fun createNote(parentId: Int?): Int {
-        val newId = generateNewNoteId()
-
+    fun createNote(parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) {
         viewModelScope.launch {
             val currentDate = Date.getCurrentTime()
-            val newNote = Note(newId, "", "", currentDate, currentDate)
+            val newNote = Note("", "", currentDate, currentDate)
 
             noteRepository.insert(newNote)
-            associateNote(newId, parentId)
-        }
+            associateNote(parentCreationDate, currentDate)
 
-        return newId
+            onCreationDone(currentDate)
+        }
     }
 
-    private suspend fun associateNote(id: Int, parentId: Int?) {
-        if (parentId != null) {
-            noteAssociationRepository.insert(
-                NoteAssociationItemUiState(
-                    parentId,
-                    id,
-                ).toNoteAssociation()
-            )
+    private suspend fun associateNote(parentCreationDate: Date?, creationDate: Date) {
+        if (parentCreationDate != null) {
+            val noteAssociation = NoteAssociationItemUiState(parentCreationDate, creationDate)
+                .toNoteAssociation()
+
+            noteAssociationRepository.insert(noteAssociation)
         }
     }
 
     /**
      * Deletes a note and all its children
      */
-    fun deleteNote(id: Int) {
+    fun deleteNote(creationDate: Date) {
         viewModelScope.launch {
-            val note = noteRepository.get(id) ?: return@launch
-
-            noteRepository.getChildren(id).forEach { child ->
-                noteRepository.delete(child.id)
+            noteRepository.getChildren(creationDate).forEach { child ->
+                noteRepository.delete(child.creationDate)
                 deletedNoteRepository.insert(DeletedNote(child.creationDate))
+                noteAssociationRepository.deleteByChildCreationDate(child.creationDate)
             }
 
-            noteRepository.delete(id)
-            deletedNoteRepository.insert(DeletedNote(note.creationDate))
+            noteRepository.delete(creationDate)
+            deletedNoteRepository.insert(DeletedNote(creationDate))
         }
     }
 
@@ -144,7 +124,7 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.startDocument("UTF-8", true)
 
             serializer.startTag("", "data")
-            serializer.attribute("", "version", "1")
+            serializer.attribute("", "version", "2")
             notesToXml(serializer)
             noteAssociationsToXml(serializer)
             deletedNotesToXml(serializer)
@@ -160,7 +140,6 @@ class NoteViewModel(context: Context) : ViewModel() {
 
         noteRepository.getAllNotes().forEach { note ->
             serializer.startTag("", "note")
-            serializer.attribute("", "id", note.id.toString())
             serializer.attribute("", "title", note.title)
             serializer.attribute("", "content", note.content)
             serializer.attribute("", "creationDate", note.creationDate.toString())
@@ -178,13 +157,13 @@ class NoteViewModel(context: Context) : ViewModel() {
             serializer.startTag("", "noteAssociation")
             serializer.attribute(
                 "",
-                "parentId",
-                noteAssociation.parentId.toString()
+                "parentCreationDate",
+                noteAssociation.parentCreationDate.toString()
             )
             serializer.attribute(
                 "",
-                "childId",
-                noteAssociation.childId.toString()
+                "childCreationDate",
+                noteAssociation.childCreationDate.toString()
             )
             serializer.endTag("", "noteAssociation")
         }
@@ -226,7 +205,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                     when (parser.name) {
                         "data" -> {
                             val version: Int? = parser.getAttributeValue("", "version")?.toInt()
-                            if (version != 1) {
+                            if (version != 2) {
                                 stream.close()
                                 _uiState.value = _uiState.value.copy(
                                     isImporting = false,
@@ -238,7 +217,6 @@ class NoteViewModel(context: Context) : ViewModel() {
                         }
 
                         "note" -> {
-                            val id = parser.getAttributeValue("", "id").toInt()
                             val title = parser.getAttributeValue("", "title")
                             val content = parser.getAttributeValue("", "content")
                             val creationDate = Date.fromString(
@@ -248,14 +226,20 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 parser.getAttributeValue("", "lastEditTime")
                             )
 
-                            importedNotes.add(Note(id, title, content, creationDate, lastEditTime))
+                            importedNotes.add(Note(title, content, creationDate, lastEditTime))
                         }
 
                         "noteAssociation" -> {
-                            val parentId = parser.getAttributeValue("", "parentId").toInt()
-                            val childId = parser.getAttributeValue("", "childId").toInt()
+                            val parentCreationDate = Date.fromString(
+                                parser.getAttributeValue("", "parentCreationDate")
+                            )
+                            val childCreationDate = Date.fromString(
+                                parser.getAttributeValue("", "childCreationDate")
+                            )
 
-                            importedNoteAssociations.add(NoteAssociation(parentId, childId))
+                            importedNoteAssociations.add(
+                                NoteAssociation(parentCreationDate, childCreationDate)
+                            )
                         }
 
                         "deletedNote" -> {
@@ -272,64 +256,14 @@ class NoteViewModel(context: Context) : ViewModel() {
 
             stream.close()
 
-            // Apply import
-            // It imports notes, note associations and deleted notes
-            // It deletes all notes that need to be deleted
-            // It deletes all deleted notes that have been restored due to the import (this can
-            // happen if the import is from a backup that was created before the note was deleted)
-
-            // Search for conflicts and update id generator
-
-            val importedNotesWithConflict = mutableListOf<Note>()
-            val importedNotesWithoutConflict = mutableListOf<Note>()
-
-            var greatestId = 0
-
-            val existingNotes = noteRepository.getAllNotes()
-
-            for (importedNote in importedNotes) {
-                if (greatestId < importedNote.id) {
-                    greatestId = importedNote.id
-                }
-
-                var isNotInList = true
-                for (existingNote in existingNotes) {
-                    if (greatestId < existingNote.id) {
-                        greatestId = existingNote.id
-                    }
-                    if (existingNote.id == importedNote.id && existingNote.creationDate != importedNote.creationDate) {
-                        importedNotesWithConflict.add(importedNote)
-                        isNotInList = false
-                    }
-                }
-
-                if (isNotInList) {
-                    importedNotesWithoutConflict.add(importedNote)
+            importedNotes.forEach {
+                if (noteRepository.get(it.creationDate) == null) {
+                    noteRepository.insert(it)
                 }
             }
-
-            updateNoteIdGenerator(greatestId)
-
-            for (importedNote in importedNotesWithConflict) {
-                val oldId = importedNote.id
-                importedNote.id = generateNewNoteId()
-
-                for (importedNoteAssociation in importedNoteAssociations) {
-                    if (importedNoteAssociation.parentId == oldId) {
-                        importedNoteAssociation.parentId = importedNote.id
-                    }
-                    if (importedNoteAssociation.childId == oldId) {
-                        importedNoteAssociation.childId = importedNote.id
-                    }
-                }
-            }
-
-            noteRepository.insert(
-                *importedNotesWithConflict.toTypedArray(),
-                *importedNotesWithoutConflict.toTypedArray()
-            )
             noteAssociationRepository.insert(*importedNoteAssociations.toTypedArray())
             deletedNoteRepository.insert(*importedDeletedNotes.toTypedArray())
+
             importedDeletedNotes.forEach { deletedNote ->
                 noteRepository.delete(deletedNote.creationDate)
             }
@@ -342,48 +276,7 @@ class NoteViewModel(context: Context) : ViewModel() {
         }
     }
 
-    private suspend fun updateNoteIdGenerator(newIdGenerator: Int? = null) {
-        if (newIdGenerator != null) {
-            noteIdGenerator = newIdGenerator
-            preferenceRepository.setPreference(
-                Preference(
-                    PREFERENCES_NOTE_ID_GENERATOR,
-                    noteIdGenerator.toString()
-                )
-            )
-        } else {
-            preferenceRepository.getPreference(PREFERENCES_NOTE_ID_GENERATOR).apply {
-                if (this != null) {
-                    noteIdGenerator = value.toInt()
-                } else {
-                    val preference = Preference(
-                        PREFERENCES_NOTE_ID_GENERATOR,
-                        noteIdGenerator.toString()
-                    )
-                    preferenceRepository.setPreference(preference)
-                }
-            }
-        }
-    }
-
-    private fun generateNewNoteId(): Int {
-        val newId = ++noteIdGenerator
-
-        viewModelScope.launch {
-            val preference = Preference(
-                PREFERENCES_NOTE_ID_GENERATOR,
-                newId.toString()
-            )
-
-            preferenceRepository.setPreference(preference)
-        }
-
-        return newId
-    }
-
     companion object {
-        private const val PREFERENCES_NOTE_ID_GENERATOR = "note_id_generator"
-
         @Suppress("UNCHECKED_CAST")
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {

@@ -1,6 +1,6 @@
 package com.huggets.mynotes.data
 
-import java.util.*
+import java.util.Calendar
 
 data class Date(
     val year: Int,

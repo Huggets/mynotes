@@ -14,7 +14,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
                 content TEXT NOT NULL,
                 creation_date TEXT NOT NULL,
                 last_edit_time TEXT NOT NULL,
-                PRIMARY KEY(`id`)
+                PRIMARY KEY(id)
             );
             """.trimMargin()
         )
@@ -107,5 +107,64 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
             );
             """.trimIndent()
         )
+    }
+}
+
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create new note_association table
+        database.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS note_association_new (
+                parent_creation_date TEXT NOT NULL,
+                child_creation_date TEXT NOT NULL, 
+                PRIMARY KEY(parent_creation_date, child_creation_date)
+            );
+            """.trimIndent()
+        )
+        database.execSQL(
+            """
+            INSERT INTO note_association_new (parent_creation_date, child_creation_date)
+            SELECT parent.creation_date, child.creation_date FROM note_association
+            JOIN note AS parent ON parent.id = note_association.parent_id
+            JOIN note AS child ON child.id = note_association.child_id;
+            """.trimIndent()
+        )
+
+        // Create new note table
+        database.execSQL(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS note_new USING FTS4(
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                creation_date TEXT NOT NULL, 
+                last_edit_time TEXT NOT NULL
+            )
+            """.trimMargin()
+        )
+        database.execSQL(
+            """
+            INSERT INTO note_new (title, content, creation_date, last_edit_time)
+            SELECT note.title, note.content, note.creation_date, note.last_edit_time
+            FROM note;
+            """.trimIndent()
+        )
+
+        // Drop old note and old note_association tables and rename new note and new note_association table
+        database.execSQL("DROP TABLE note")
+        database.execSQL("DROP TABLE note_association")
+        database.execSQL("ALTER TABLE note_new RENAME TO note")
+        database.execSQL("ALTER TABLE note_association_new RENAME TO note_association")
+
+        // Create indices
+        database.execSQL(
+            """
+            CREATE INDEX IF NOT EXISTS index_note_association_child_creation_date
+            ON note_association (child_creation_date)
+            """.trimIndent()
+        )
+
+        // Drop preference table
+        database.execSQL("DROP TABLE preference")
     }
 }

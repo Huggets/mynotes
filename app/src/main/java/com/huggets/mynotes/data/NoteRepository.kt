@@ -6,15 +6,15 @@ class NoteRepository(context: Context) {
 
     private val noteDao = ApplicationDatabase.getDb(context).noteDao()
 
-    suspend fun insert(vararg notes: Note) = noteDao.insert(*notes)
+    suspend fun insert(note: Note) =
+        noteDao.insert(note.title, note.content, note.creationDate, note.lastEditTime)
 
-    suspend fun update(vararg notes: Note) = noteDao.update(*notes)
-
-    suspend fun delete(id: Int) = noteDao.delete(id) > 0
+    suspend fun update(note: Note) =
+        noteDao.update(note.title, note.content, note.creationDate, note.lastEditTime)
 
     suspend fun delete(creationDate: Date) = noteDao.delete(creationDate) > 0
 
-    suspend fun get(id: Int) = noteDao.get(id)
+    suspend fun get(creationDate: Date) = noteDao.get(creationDate)
 
     fun syncAllNotes() = noteDao.getAllNotesFlow()
 
@@ -25,7 +25,5 @@ class NoteRepository(context: Context) {
     /**
      * Get all children of a note recursively
      */
-    suspend fun getChildren(id: Int) = noteDao.getChildren(id)
-
-    suspend fun getGreatestIdUsed() = noteDao.getGreatestIdUsed()
+    suspend fun getChildren(parentCreationDate: Date) = noteDao.getChildren(parentCreationDate)
 }

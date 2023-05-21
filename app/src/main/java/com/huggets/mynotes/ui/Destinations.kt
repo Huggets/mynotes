@@ -1,10 +1,11 @@
 package com.huggets.mynotes.ui
 
+
+import com.huggets.mynotes.data.Date
+
 object Destinations {
     object ParametersName {
-        const val noteId = "noteId"
-        // TODO Maybe remove this parameter
-        const val parentId = "parentId"
+        const val noteCreationDate = "noteCreationDate"
     }
 
     private const val viewNoteList = "viewNoteList"
@@ -12,10 +13,8 @@ object Destinations {
     private const val newNote = "newNote"
 
     const val viewNoteListRoute = viewNoteList
-    const val newNoteRoute =
-        "$newNote/{${ParametersName.noteId}}?${ParametersName.parentId}={${ParametersName.parentId}}"
-    const val editNoteRoute =
-        "$editNote/{${ParametersName.noteId}}?${ParametersName.parentId}={${ParametersName.parentId}}"
+    const val newNoteRoute = "$newNote/{${ParametersName.noteCreationDate}}"
+    const val editNoteRoute = "$editNote/{${ParametersName.noteCreationDate}}"
 
     /**
      * Generate a route to the view note list destination
@@ -25,24 +24,18 @@ object Destinations {
     /**
      * Generate a route to the edit note destination.
      *
-     * @param noteId The id of the note to edit.
-     * @param parentId If parentId is null, then the note will be a root note,
-     * otherwise it will be associated to the parent note.
+     * @param noteCreationDate The creation date of the note to edit.
      * @param isNew If the note is a new note or an existing one.
      */
     fun generateEditNote(
-        noteId: Int,
-        parentId: Int?,
+        noteCreationDate: Date,
         isNew: Boolean,
     ): String {
-        val parent: String? =
-            if (parentId == null) null
-            else "${ParametersName.parentId}=$parentId"
 
         return if (isNew) {
-            "$newNote/$noteId?$parent"
+            "$newNote/$noteCreationDate"
         } else {
-            "$editNote/$noteId?$parent"
+            "$editNote/$noteCreationDate"
         }
     }
 }
