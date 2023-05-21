@@ -39,7 +39,7 @@ class NoteViewModel(context: Context) : ViewModel() {
         noteIdGenerator = 0
 
         viewModelScope.launch {
-            fetchNoteIdGenerator()
+            updateNoteIdGenerator()
             _uiState.value = _uiState.value.copy(isInitializationFinished = true)
         }
     }
@@ -216,9 +216,9 @@ class NoteViewModel(context: Context) : ViewModel() {
             val parser = Xml.newPullParser()
             parser.setInput(stream, "UTF-8")
 
-            val notes = mutableListOf<Note>()
-            val noteAssociations = mutableListOf<NoteAssociation>()
-            val deletedNotes = mutableListOf<DeletedNote>()
+            val importedNotes = mutableListOf<Note>()
+            val importedNoteAssociations = mutableListOf<NoteAssociation>()
+            val importedDeletedNotes = mutableListOf<DeletedNote>()
 
             var eventType = parser.eventType
             while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -259,14 +259,14 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 parser.getAttributeValue("", "lastEditTime")
                             )
 
-                            notes.add(Note(id, title, content, creationDate, lastEditTime))
+                            importedNotes.add(Note(id, title, content, creationDate, lastEditTime))
                         }
 
                         "noteAssociation" -> {
                             val parentId = parser.getAttributeValue("", "parentId").toInt()
                             val childId = parser.getAttributeValue("", "childId").toInt()
 
-                            noteAssociations.add(NoteAssociation(parentId, childId))
+                            importedNoteAssociations.add(NoteAssociation(parentId, childId))
                         }
 
                         "deletedNote" -> {
@@ -274,7 +274,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 parser.getAttributeValue("", "creationDate")
                             )
 
-                            deletedNotes.add(DeletedNote(creationDate))
+                            importedDeletedNotes.add(DeletedNote(creationDate))
                         }
                     }
                 }
@@ -289,10 +289,59 @@ class NoteViewModel(context: Context) : ViewModel() {
             // It deletes all deleted notes that have been restored due to the import (this can
             // happen if the import is from a backup that was created before the note was deleted)
 
-            noteRepository.insert(*notes.toTypedArray())
-            noteAssociationRepository.insert(*noteAssociations.toTypedArray())
-            deletedNoteRepository.insert(*deletedNotes.toTypedArray())
-            deletedNotes.forEach { deletedNote ->
+            // Search for conflicts and update id generator
+
+            val importedNotesWithConflict = mutableListOf<Note>()
+            val importedNotesWithoutConflict = mutableListOf<Note>()
+
+            var greatestId = 0
+
+            val existingNotes = noteRepository.getAllNotes()
+
+            for (importedNote in importedNotes) {
+                if (greatestId < importedNote.id) {
+                    greatestId = importedNote.id
+                }
+
+                var isNotInList = true
+                for (existingNote in existingNotes) {
+                    if (greatestId < existingNote.id) {
+                        greatestId = existingNote.id
+                    }
+                    if (existingNote.id == importedNote.id && existingNote.creationDate != importedNote.creationDate) {
+                        importedNotesWithConflict.add(importedNote)
+                        isNotInList = false
+                    }
+                }
+
+                if (isNotInList) {
+                    importedNotesWithoutConflict.add(importedNote)
+                }
+            }
+
+            updateNoteIdGenerator(greatestId)
+
+            for (importedNote in importedNotesWithConflict) {
+                val oldId = importedNote.id
+                importedNote.id = generateNewNoteId()
+
+                for (importedNoteAssociation in importedNoteAssociations) {
+                    if (importedNoteAssociation.parentId == oldId) {
+                        importedNoteAssociation.parentId = importedNote.id
+                    }
+                    if (importedNoteAssociation.childId == oldId) {
+                        importedNoteAssociation.childId = importedNote.id
+                    }
+                }
+            }
+
+            noteRepository.insert(
+                *importedNotesWithConflict.toTypedArray(),
+                *importedNotesWithoutConflict.toTypedArray()
+            )
+            noteAssociationRepository.insert(*importedNoteAssociations.toTypedArray())
+            deletedNoteRepository.insert(*importedDeletedNotes.toTypedArray())
+            importedDeletedNotes.forEach { deletedNote ->
                 noteRepository.delete(deletedNote.creationDate)
             }
 
@@ -300,33 +349,30 @@ class NoteViewModel(context: Context) : ViewModel() {
                 deletedNoteRepository.delete(it.creationDate)
             }
 
-            // Update note id generator
-
-            val greatestIdUsed = noteRepository.getGreatestIdUsed() ?: 0
-
-            preferenceRepository.setPreference(
-                Preference(
-                    PREFERENCES_NOTE_ID_GENERATOR,
-                    greatestIdUsed.toString()
-                )
-            )
-
-            fetchNoteIdGenerator()
-
             _uiState.value = _uiState.value.copy(isImporting = false)
         }
     }
 
-    private suspend fun fetchNoteIdGenerator() {
-        preferenceRepository.getPreference(PREFERENCES_NOTE_ID_GENERATOR).apply {
-            if (this != null) {
-                noteIdGenerator = value.toInt()
-            } else {
-                val preference = Preference(
+    private suspend fun updateNoteIdGenerator(newIdGenerator: Int? = null) {
+        if (newIdGenerator != null) {
+            noteIdGenerator = newIdGenerator
+            preferenceRepository.setPreference(
+                Preference(
                     PREFERENCES_NOTE_ID_GENERATOR,
                     noteIdGenerator.toString()
                 )
-                preferenceRepository.setPreference(preference)
+            )
+        } else {
+            preferenceRepository.getPreference(PREFERENCES_NOTE_ID_GENERATOR).apply {
+                if (this != null) {
+                    noteIdGenerator = value.toInt()
+                } else {
+                    val preference = Preference(
+                        PREFERENCES_NOTE_ID_GENERATOR,
+                        noteIdGenerator.toString()
+                    )
+                    preferenceRepository.setPreference(preference)
+                }
             }
         }
     }
