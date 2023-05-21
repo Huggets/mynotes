@@ -8,7 +8,7 @@ import androidx.room.Query
 @Dao
 interface PreferenceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(preference: Preference)
+    suspend fun insert(vararg preferences: Preference)
 
     @Query("SELECT * FROM preference WHERE name = :name")
     suspend fun getPreference(name: String): Preference?

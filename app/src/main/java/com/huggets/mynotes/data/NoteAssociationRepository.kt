@@ -9,6 +9,6 @@ class NoteAssociationRepository(context: Context) {
 
     suspend fun getAllAssociations() = noteAssociationDao.getAllAssociations()
 
-    suspend fun insert(noteAssociation: NoteAssociation) =
-        noteAssociationDao.insert(noteAssociation)
+    suspend fun insert(vararg noteAssociations: NoteAssociation) =
+        noteAssociationDao.insert(*noteAssociations)
 }

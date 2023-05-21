@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface NoteAssociationDao {
     @Insert
-    suspend fun insert(noteAssociation: NoteAssociation)
+    suspend fun insert(vararg noteAssociations: NoteAssociation)
 
     @Query("SELECT * FROM note_association")
     fun getAllAssociationsFlow(): Flow<List<NoteAssociation>>

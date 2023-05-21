@@ -6,9 +6,9 @@ class NoteRepository(context: Context) {
 
     private val noteDao = ApplicationDatabase.getDb(context).noteDao()
 
-    suspend fun insert(note: Note) = noteDao.insert(note)
+    suspend fun insert(vararg notes: Note) = noteDao.insert(*notes)
 
-    suspend fun update(note: Note) = noteDao.update(note)
+    suspend fun update(vararg notes: Note) = noteDao.update(*notes)
 
     suspend fun delete(id: Int) = noteDao.delete(id) > 0
 

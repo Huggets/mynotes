@@ -7,5 +7,5 @@ class PreferenceRepository(context: Context) {
 
     suspend fun getPreference(name: String) = preferenceDao.getPreference(name)
 
-    suspend fun setPreference(preference: Preference) = preferenceDao.insert(preference)
+    suspend fun setPreference(vararg preferences: Preference) = preferenceDao.insert(*preferences)
 }

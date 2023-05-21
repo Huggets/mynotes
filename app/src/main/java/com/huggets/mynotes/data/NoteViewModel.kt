@@ -131,6 +131,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                 noteRepository.delete(child.id)
                 deletedNoteRepository.insert(DeletedNote(child.creationDate))
             }
+
             noteRepository.delete(id)
             deletedNoteRepository.insert(DeletedNote(note.creationDate))
         }
@@ -212,6 +213,10 @@ class NoteViewModel(context: Context) : ViewModel() {
             val parser = Xml.newPullParser()
             parser.setInput(stream, "UTF-8")
 
+            val notes = mutableListOf<Note>()
+            val noteAssociations = mutableListOf<NoteAssociation>()
+            val deletedNotes = mutableListOf<DeletedNote>()
+
             var eventType = parser.eventType
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 if (eventType == XmlPullParser.START_TAG) {
@@ -234,18 +239,14 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 parser.getAttributeValue("", "lastEditTime")
                             )
 
-                            val note =
-                                NoteItemUiState(id, title, content, creationDate, lastEditTime)
-                            noteRepository.insert(note.toNote())
+                            notes.add(Note(id, title, content, creationDate, lastEditTime))
                         }
 
                         "noteAssociation" -> {
                             val parentId = parser.getAttributeValue("", "parentId").toInt()
                             val childId = parser.getAttributeValue("", "childId").toInt()
 
-                            val noteAssociation =
-                                NoteAssociationItemUiState(parentId, childId).toNoteAssociation()
-                            noteAssociationRepository.insert(noteAssociation)
+                            noteAssociations.add(NoteAssociation(parentId, childId))
                         }
 
                         "deletedNote" -> {
@@ -253,9 +254,7 @@ class NoteViewModel(context: Context) : ViewModel() {
                                 parser.getAttributeValue("", "creationDate")
                             )
 
-                            val deletedNote = DeletedNote(creationDate)
-                            deletedNoteRepository.insert(deletedNote)
-                            noteRepository.delete(creationDate)
+                            deletedNotes.add(DeletedNote(creationDate))
                         }
                     }
                 }
@@ -264,10 +263,21 @@ class NoteViewModel(context: Context) : ViewModel() {
 
             stream.close()
 
-            // Remove all deleted notes that have been restored due to the import
+            // Apply import
+            // It imports notes, note associations and deleted notes
+            // It deletes all notes that need to be deleted
+            // It deletes all deleted notes that have been restored due to the import (this can
+            // happen if the import is from a backup that was created before the note was deleted)
 
-            noteRepository.getAllNotes().forEach { note ->
-                deletedNoteRepository.delete(note.creationDate)
+            noteRepository.insert(*notes.toTypedArray())
+            noteAssociationRepository.insert(*noteAssociations.toTypedArray())
+            deletedNoteRepository.insert(*deletedNotes.toTypedArray())
+            deletedNotes.forEach { deletedNote ->
+                noteRepository.delete(deletedNote.creationDate)
+            }
+
+            noteRepository.getAllNotes().forEach {
+                deletedNoteRepository.delete(it.creationDate)
             }
 
             // Update note id generator

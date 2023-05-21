@@ -8,7 +8,7 @@ import androidx.room.Query
 @Dao
 interface DeletedNoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(deletedNote: DeletedNote)
+    suspend fun insert(vararg deletedNotes: DeletedNote)
 
     @Query("DELETE FROM deleted_note WHERE creation_date = :creationDate")
     suspend fun delete(creationDate: Date): Int

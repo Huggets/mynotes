@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface NoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(note: Note)
+    suspend fun insert(vararg notes: Note)
 
     @Update
-    suspend fun update(note: Note)
+    suspend fun update(vararg notes: Note)
 
     @Query("DELETE FROM note WHERE id = :id")
     suspend fun delete(id: Int): Int
