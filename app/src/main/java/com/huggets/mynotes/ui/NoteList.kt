@@ -372,11 +372,17 @@ private fun AppBar(
                 DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
                     DropdownMenuItem(
                         text = { Text("Export to XML") },
-                        onClick = exportToXml,
+                        onClick = {
+                            exportToXml()
+                            isExpanded = false
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text("Import from XML") },
-                        onClick = importFromXml,
+                        onClick = {
+                            importFromXml()
+                            isExpanded = false
+                        },
                     )
                 }
             }
