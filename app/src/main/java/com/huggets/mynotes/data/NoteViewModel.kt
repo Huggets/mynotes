@@ -224,20 +224,9 @@ class NoteViewModel(context: Context) : ViewModel() {
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 if (eventType == XmlPullParser.START_TAG) {
                     when (parser.name) {
-                        // TODO change implementation to not generate null pointer exception
                         "data" -> {
-                            try {
-                                val version = parser.getAttributeValue("", "version").toInt()
-                                if (version != 1) {
-                                    stream.close()
-                                    _uiState.value = _uiState.value.copy(
-                                        isImporting = false,
-                                        importFailed = true,
-                                        importFailedMessage = "Unsupported version"
-                                    )
-                                    return@launch
-                                }
-                            } catch (e: NullPointerException) {
+                            val version: Int? = parser.getAttributeValue("", "version")?.toInt()
+                            if (version != 1) {
                                 stream.close()
                                 _uiState.value = _uiState.value.copy(
                                     isImporting = false,
