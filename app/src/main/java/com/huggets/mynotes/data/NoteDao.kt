@@ -30,6 +30,9 @@ interface NoteDao {
     @Query("SELECT * FROM note WHERE creation_date = :creationDate")
     suspend fun get(creationDate: Date): Note?
 
+    @Query("SELECT * from note WHERE title MATCH :query OR content MATCH :query")
+    fun search(query: String): Flow<List<Note>>
+
     @Query("SELECT * FROM note")
     fun getAllNotesFlow(): Flow<List<Note>>
 

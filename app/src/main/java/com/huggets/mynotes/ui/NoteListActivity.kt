@@ -32,7 +32,6 @@ import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.find
 
-private val emphasizedFloat = Value.Animation.emphasized<Float>()
 private val saver = Saver<SnapshotStateMap<Date, Boolean>, String>(save = {
     val builder = StringBuilder()
     for ((creationDate, value) in it) {
@@ -59,8 +58,10 @@ private val saver = Saver<SnapshotStateMap<Date, Boolean>, String>(save = {
     map
 })
 
+private val emphasizedFloat = Value.Animation.emphasized<Float>()
+
 @Composable
-fun NoteList(
+fun NoteListActivity(
     quitApplication: () -> Unit,
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
@@ -81,44 +82,20 @@ fun NoteList(
     val fabWasShown = rememberSaveable { mutableStateOf(true) }
     val fabTransitionState = remember { MutableTransitionState(fabWasShown.value) }
     val deleteIconTransitionState = remember { MutableTransitionState(selectionMode.value) }
+
     fabTransitionState.targetState = if (fabWasShown.value) !selectionMode.value else false
     deleteIconTransitionState.targetState = selectionMode.value
     if (!selectionMode.value) {
         fabWasShown.value = fabTransitionState.targetState
     }
 
-    val onBackPressed = remember {
-        object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (selectionMode.value) {
-                    // Unselect all notes
-                    selectionMode.value = false
-                    selectedCount.value = 0
-
-                    for (noteCreationDate in isNoteSelected.keys) {
-                        isNoteSelected[noteCreationDate] = false
-                    }
-                } else {
-                    val navigationFailed = !navigationController.navigateUp()
-                    if (navigationFailed) {
-                        quitApplication()
-                    }
-                }
-            }
-        }
-    }
-    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner, backDispatcher) {
-        backDispatcher?.onBackPressedDispatcher?.addCallback(
-            lifecycleOwner, onBackPressed
-        )
-
-        onDispose {
-            onBackPressed.remove()
-        }
-    }
+    BackPressHandler(
+        navigationController,
+        quitApplication,
+        selectionMode,
+        isNoteSelected,
+        selectedCount
+    )
 
     BoxWithConstraints {
         fabPosition.value =
@@ -181,6 +158,48 @@ fun NoteList(
                     deleteNotes(toDelete)
                 }, confirmationMessage = "Are you sure you want to delete the selected note(s)?"
             )
+        }
+    }
+}
+
+@Composable
+private fun BackPressHandler(
+    navigationController: NavHostController,
+    quitApplication: () -> Unit,
+    selectionMode: MutableState<Boolean>,
+    isNoteSelected: SnapshotStateMap<Date, Boolean>,
+    selectedCount: MutableState<Int>,
+) {
+    val onBackPressed = remember {
+        object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (selectionMode.value) {
+                    // Unselect all notes
+                    selectionMode.value = false
+                    selectedCount.value = 0
+
+                    for (noteCreationDate in isNoteSelected.keys) {
+                        isNoteSelected[noteCreationDate] = false
+                    }
+                } else {
+                    val navigationFailed = !navigationController.navigateUp()
+                    if (navigationFailed) {
+                        quitApplication()
+                    }
+                }
+            }
+        }
+    }
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, backDispatcher) {
+        backDispatcher?.onBackPressedDispatcher?.addCallback(
+            lifecycleOwner, onBackPressed
+        )
+
+        onDispose {
+            onBackPressed.remove()
         }
     }
 }

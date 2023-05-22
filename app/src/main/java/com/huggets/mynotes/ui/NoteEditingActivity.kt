@@ -35,7 +35,7 @@ import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.find
 
 @Composable
-fun NoteEditing(
+fun NoteEditingActivity(
     navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     noteCreationDate: Date,
