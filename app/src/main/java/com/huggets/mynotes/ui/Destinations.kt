@@ -11,10 +11,12 @@ object Destinations {
     private const val viewNoteList = "viewNoteList"
     private const val editNote = "editNote"
     private const val newNote = "newNote"
+    private const val dataSyncing = "dataSyncing"
 
     const val viewNoteListRoute = viewNoteList
     const val newNoteRoute = "$newNote/{${ParametersName.noteCreationDate}}"
     const val editNoteRoute = "$editNote/{${ParametersName.noteCreationDate}}"
+    const val dataSyncingRoute = dataSyncing
 
     /**
      * Generate a route to the view note list destination
@@ -38,4 +40,6 @@ object Destinations {
             "$editNote/$noteCreationDate"
         }
     }
+
+    fun generateDataSyncing() = dataSyncing
 }

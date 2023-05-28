@@ -10,7 +10,7 @@ data class Date(
     val minute: Int,
     val second: Int,
     val millisecond: Int,
-) {
+) : Comparable<Date> {
     private fun toTwoDigitString(number: Int): String {
         return if (number < 10) "0$number" else number.toString()
     }
@@ -38,6 +38,18 @@ data class Date(
         val millisecond = toThreeDigitString(this.millisecond)
 
         return "$year-$month-$day $hour:$minute:$second.$millisecond"
+    }
+
+    override fun compareTo(other: Date): Int {
+        if (this.year != other.year) return this.year - other.year
+        else if (this.month != other.month) return this.month - other.month
+        else if (this.day != other.day) return this.day - other.day
+        else if (this.hour != other.hour) return this.hour - other.hour
+        else if (this.minute != other.minute) return this.minute - other.minute
+        else if (this.second != other.second) return this.second - other.second
+        else if (this.millisecond != other.millisecond) return this.millisecond - other.millisecond
+
+        return 0
     }
 
     companion object {

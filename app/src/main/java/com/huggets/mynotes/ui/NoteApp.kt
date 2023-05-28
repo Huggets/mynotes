@@ -138,6 +138,12 @@ private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): Animate
     }
 }
 
+private val enterDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+    { enterScreenFromRightTransition }
+
+private val exitDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+    { exitScreenToRightTransition }
+
 private fun getCreationDate(backStackEntryArgument: Bundle) = Date.fromString(
     backStackEntryArgument.getString(Destinations.ParametersName.noteCreationDate)!!
 )
@@ -176,6 +182,20 @@ fun NoteApp(
             noteViewModel.deleteNote(creationDate)
         }
     }
+    val startSyncDataWithAnotherDevice: () -> Unit = {
+        noteViewModel.enableBluetooth()
+        navigationController.navigate(Destinations.generateDataSyncing())
+    }
+    val syncWithBluetoothDevice: (deviceAddress: String) -> Unit =
+        { deviceAddress ->
+            noteViewModel.connectToBluetoothDevice(deviceAddress)
+        }
+    val cancelSync: () -> Unit = {
+        noteViewModel.cancelBluetoothConnection()
+    }
+    val navigateUp: () -> Unit = {
+        navigationController.popBackStack()
+    }
 
     noteViewModel.syncUiState()
 
@@ -202,6 +222,7 @@ fun NoteApp(
                         createNote,
                         exportToXml,
                         importFromXml,
+                        startSyncDataWithAnotherDevice,
                         snackbarHostState,
                     )
                 }
@@ -237,6 +258,19 @@ fun NoteApp(
                         updateNote,
                         deleteNote,
                         true,
+                    )
+                }
+                composable(
+                    Destinations.dataSyncingRoute,
+                    enterTransition = enterDataSyncingTransition,
+                    exitTransition = exitDataSyncingTransition,
+                    popExitTransition = exitDataSyncingTransition,
+                ) {
+                    DataSyncingActivity(
+                        appState,
+                        syncWithBluetoothDevice,
+                        cancelSync,
+                        navigateUp,
                     )
                 }
             }

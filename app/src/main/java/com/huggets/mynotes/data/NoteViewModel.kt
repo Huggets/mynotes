@@ -1,12 +1,15 @@
 package com.huggets.mynotes.data
 
+import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.util.Xml
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
+import com.huggets.mynotes.sync.DataSynchronizer
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
@@ -16,10 +19,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlSerializer
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-class NoteViewModel(context: Context) : ViewModel() {
+class NoteViewModel(
+    context: Context,
+    private val bluetoothConnectionManager: BluetoothConnectionManager,
+) : ViewModel() {
 
     private val noteRepository = NoteRepository(context)
     private val noteAssociationRepository = NoteAssociationRepository(context)
@@ -27,6 +34,32 @@ class NoteViewModel(context: Context) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NoteAppUiState())
     val uiState = _uiState.asStateFlow()
+
+    init {
+        bluetoothConnectionManager.setOnBluetoothActivationRequestDeniedCallback {
+            _uiState.value = _uiState.value.copy(
+                dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                    bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
+                )
+            )
+            updateBondedBluetoothDevices()
+        }
+        bluetoothConnectionManager.setOnBluetoothActivationRequestAcceptedCallback {
+            _uiState.value = _uiState.value.copy(
+                dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                    bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
+                )
+            )
+            updateBondedBluetoothDevices()
+        }
+
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                bluetoothAvailable = bluetoothConnectionManager.bluetoothAvailable,
+                bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
+            )
+        )
+    }
 
     fun syncUiState() {
         viewModelScope.launch {
@@ -276,13 +309,124 @@ class NoteViewModel(context: Context) : ViewModel() {
         }
     }
 
+    @SuppressLint("MissingPermission")
+    fun updateBondedBluetoothDevices() {
+        val bondedDevices = mutableMapOf<String, String>().apply {
+            bluetoothConnectionManager.bondedDevices.forEach {
+                put(it.address, it.name)
+            }
+        }
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                bondedDevices = bondedDevices
+            )
+        )
+    }
+
+    fun enableBluetooth() {
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
+                synchronisationError = false,
+                synchronisationErrorMessage = "",
+            )
+        )
+
+        if (!bluetoothConnectionManager.bluetoothAvailable) {
+            return
+        }
+
+        if (!bluetoothConnectionManager.bluetoothEnabled) {
+            bluetoothConnectionManager.requestBluetoothActivation()
+        } else {
+            updateBondedBluetoothDevices()
+        }
+    }
+
+    fun cancelBluetoothConnection() {
+        bluetoothConnectionManager.stopConnection()
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                connecting = false,
+                connected = false,
+            )
+        )
+    }
+
+    fun connectToBluetoothDevice(deviceAddress: String) {
+        val device = bluetoothConnectionManager.bondedDevices.find {
+            it.address.equals(deviceAddress)
+        } ?: return
+
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                connecting = true,
+                synchronisationError = false,
+                synchronisationErrorMessage = "",
+            )
+        )
+
+        bluetoothConnectionManager.connect(
+            device,
+            ::onBluetoothConnectionEstablished,
+            ::onBluetoothConnectionError,
+        )
+    }
+
+    private fun onBluetoothConnectionEstablished() {
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                connecting = false,
+                connected = true,
+            )
+        )
+
+        val dataSynchronizer = DataSynchronizer(
+            bluetoothConnectionManager,
+            noteRepository,
+            noteAssociationRepository,
+            deletedNoteRepository,
+        )
+        dataSynchronizer.sync {
+            bluetoothConnectionManager.stopConnection()
+
+            val error = it != null
+            val errorMessage = it?.message ?: "No message"
+
+            _uiState.value = _uiState.value.copy(
+                dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                    connected = false,
+                    synchronisationError = error,
+                    synchronisationErrorMessage = errorMessage,
+                )
+            )
+        }
+    }
+
+    private fun onBluetoothConnectionError(exception: IOException) {
+        _uiState.value = _uiState.value.copy(
+            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                connecting = false,
+                connected = false,
+                synchronisationError = true,
+                synchronisationErrorMessage = exception.message ?: "Unknown error"
+            )
+        )
+    }
+
     companion object {
+        val APPLICATION_KEY_EXTRAS = object : CreationExtras.Key<Application> {}
+        val BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS =
+            object : CreationExtras.Key<BluetoothConnectionManager> {}
+
         @Suppress("UNCHECKED_CAST")
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-                val application = checkNotNull(extras[APPLICATION_KEY])
+                val application = checkNotNull(extras[APPLICATION_KEY_EXTRAS])
+                val bluetoothConnectionManager =
+                    checkNotNull(extras[BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS])
 
-                return NoteViewModel(application) as? T
+                return NoteViewModel(application, bluetoothConnectionManager) as? T
                     ?: throw IllegalArgumentException("Unknown ViewModel class")
             }
         }

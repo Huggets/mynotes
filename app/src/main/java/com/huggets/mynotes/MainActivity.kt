@@ -1,5 +1,6 @@
 package com.huggets.mynotes
 
+import android.bluetooth.BluetoothManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,6 +13,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.MutableCreationExtras
+import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +28,37 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val noteViewModel: NoteViewModel by viewModels { NoteViewModel.Factory }
+        val bluetoothConnectionManager = BluetoothConnectionManager(
+            getSystemService(BluetoothManager::class.java),
+            packageManager
+        )
+
+        val requestBluetoothActivationActivityLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (it.resultCode == RESULT_OK) {
+                    bluetoothConnectionManager.onBluetoothActivationRequestAccepted()
+                } else {
+                    bluetoothConnectionManager.onBluetoothActivationRequestDenied()
+                }
+            }
+        val requestBluetoothActivationCallback: () -> Unit = {
+            val enableBluetoothIntent =
+                android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            requestBluetoothActivationActivityLauncher.launch(enableBluetoothIntent)
+        }
+
+        val noteViewModel by viewModels<NoteViewModel>({
+            MutableCreationExtras().also { extras ->
+                extras[NoteViewModel.APPLICATION_KEY_EXTRAS] = application
+                extras[NoteViewModel.BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS] =
+                    bluetoothConnectionManager
+            }
+        }) { NoteViewModel.Factory }
+
+        bluetoothConnectionManager.setRequestBluetoothActivationCallback(
+            requestBluetoothActivationCallback
+        )
+
         var showSnackbar: MutableState<Boolean>? = null
         var snackbarMessage: MutableState<String>? = null
 

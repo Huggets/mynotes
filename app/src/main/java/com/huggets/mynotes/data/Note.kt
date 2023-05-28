@@ -13,4 +13,10 @@ data class Note(
     var creationDate: Date,
     @ColumnInfo(name = "last_edit_time")
     var lastEditTime: Date,
-)
+) {
+    companion object {
+        fun List<Note>.find(creationDate: Date): Note? {
+            return this.find { it.creationDate == creationDate }
+        }
+    }
+}

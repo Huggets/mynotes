@@ -70,6 +70,7 @@ fun NoteListActivity(
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
+    startSyncDataWithAnotherDevice: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
@@ -109,6 +110,7 @@ fun NoteListActivity(
                     deleteIconState = deleteIconTransitionState,
                     exportToXml = exportToXml,
                     importFromXml = importFromXml,
+                    startSyncDataWithAnotherDevice = startSyncDataWithAnotherDevice,
                 )
             },
             floatingActionButton = {
@@ -380,6 +382,7 @@ private fun AppBar(
     deleteIconState: MutableTransitionState<Boolean>,
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
+    startSyncDataWithAnotherDevice: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -414,6 +417,13 @@ private fun AppBar(
                         text = { Text("Import from XML") },
                         onClick = {
                             importFromXml()
+                            isExpanded = false
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sync data with another device") },
+                        onClick = {
+                            startSyncDataWithAnotherDevice()
                             isExpanded = false
                         },
                     )
