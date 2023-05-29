@@ -6,20 +6,21 @@ import com.huggets.mynotes.sync.DataSynchronizer.Companion.addInt
 import java.io.IOException
 
 abstract class SendingBuffer<out InputType>(
-    protected var buffer: ByteArray = ByteArray(1024)
+    protected var buffer: ByteArray = ByteArray(1024),
+    private val countHeader: DataSynchronizer.Companion.Header,
 ) : Buffer {
 
     val currentElement: InputType
         get() = localData[localDataIndex]
 
-    val elementsCount
+    val localElementCount
         get() = localData.size
 
-    val elementsSent
+    val remoteElementsSent
         get() = localDataIndex
 
     val allDataNotSent: Boolean
-        get() = elementCountNotSent || elementsSent != elementsCount
+        get() = elementCountNotSent || localDataIndex != localData.size
 
     protected lateinit var localData: List<@UnsafeVariance InputType>
         private set
@@ -30,10 +31,23 @@ abstract class SendingBuffer<out InputType>(
 
     private var elementCountNotSent = true
 
-    /**
-     * Fills the buffer with data to send.
-     */
-    abstract fun fill()
+    protected abstract fun fillBuffer()
+
+    private fun fillElementCount() {
+        if (elementCountNotSent) {
+            buffer[bufferIndex] = countHeader.value
+            bufferIndex += 1
+            buffer.addInt(localData.size, bufferIndex)
+            bufferIndex += 4
+
+            elementCountNotSent = false
+        }
+    }
+
+    fun fill() {
+        fillElementCount()
+        fillBuffer()
+    }
 
     /**
      * Sends data to the other device.
@@ -48,20 +62,10 @@ abstract class SendingBuffer<out InputType>(
     @Throws(IOException::class)
     fun send(bluetoothConnectionManager: BluetoothConnectionManager) {
         bluetoothConnectionManager.writeData(buffer, 0, bufferIndex)
+        bufferIndex = 0
     }
 
     fun setData(localData: List<@UnsafeVariance InputType>) {
         this.localData = localData
-    }
-
-    fun fillElementCount(header: DataSynchronizer.Companion.Header) {
-        if (elementCountNotSent) {
-            buffer[bufferIndex] = header.value
-            bufferIndex += 1
-            buffer.addInt(localData.size, bufferIndex)
-            bufferIndex += 4
-
-            elementCountNotSent = false
-        }
     }
 }

@@ -96,4 +96,37 @@ abstract class ReceivingBuffer<OutputType>(
             return fetchedData
         }
     }
+
+    /**
+     * Fetches more data if the required size is not available.
+     *
+     * @param buffer The buffer to read from.
+     * @param index The current index of the buffer.
+     * @param maxIndex The max index of the buffer.
+     * @param requiredSize The required size.
+     *
+     * @return A pair containing the new index and max index of the buffer.
+     */
+    protected fun fetchMoreDataIfNeeded(
+        buffer: ByteArray,
+        index: Int,
+        maxIndex: Int,
+        requiredSize: Int,
+    ): Pair<Int, Int> {
+        var newIndex = index
+        var newMaxIndex = maxIndex
+
+        while (newMaxIndex - newIndex < requiredSize) {
+            // Move data to the beginning of the buffer if it is not possible to fetch all
+            // the data
+            if (buffer.size - newIndex < requiredSize) {
+                newMaxIndex = Buffer.moveDataToStart(buffer, newIndex, newMaxIndex)
+                newIndex = 0
+            }
+
+            newMaxIndex += fetchData(buffer, newMaxIndex, buffer.size - newMaxIndex)
+        }
+
+        return Pair(newIndex, newMaxIndex)
+    }
 }

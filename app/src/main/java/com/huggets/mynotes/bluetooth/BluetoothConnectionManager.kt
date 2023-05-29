@@ -78,7 +78,6 @@ class BluetoothConnectionManager(
             return
         }
 
-
         isConnecting = true
 
         var exception: IOException? = null

@@ -6,13 +6,9 @@ import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
 import com.huggets.mynotes.sync.DataSynchronizer.Companion.addDate
 
 class DatesSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
-    SendingBuffer<Note>(buffer) {
+    SendingBuffer<Note>(buffer, Header.DATES_COUNT) {
 
-    override fun fill() {
-        bufferIndex = 0
-
-        fillElementCount(Header.DATES_COUNT)
-
+    override fun fillBuffer() {
         buffer[bufferIndex] = Header.DATES.value
         bufferIndex += 1
 

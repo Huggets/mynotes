@@ -53,7 +53,7 @@ interface NoteDao {
           SELECT note_association.child_creation_date FROM note_association
             JOIN children ON note_association.parent_creation_date = children.child_creation_date
         )
-        SELECT note.* FROM note JOIN children ON note.rowid = children.child_creation_date
+        SELECT note.* FROM note JOIN children ON note.creation_date= children.child_creation_date
         """
     )
     suspend fun getChildren(parentNoteCreationDate: Date): List<Note>

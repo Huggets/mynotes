@@ -4,7 +4,6 @@ import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.sync.DataSynchronizer
 import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
 import com.huggets.mynotes.sync.DataSynchronizer.Companion.fromByteArray
-import com.huggets.mynotes.sync.buffer.Buffer.Companion.moveDataToStart
 
 class NeededNotesReceivingBuffer(
     fetch: (ByteArray, Int, Int) -> Int,
@@ -27,31 +26,21 @@ class NeededNotesReceivingBuffer(
 
         index++
 
-        // If there is just the prefix and nothing else, fetch more data
-        if (maxIndex - index == 0) {
-            // Move data to the beginning of the buffer if it is full
-            if (maxIndex >= buffer.size) {
-                maxIndex = moveDataToStart(buffer, index, maxIndex)
-                index = 0
-            }
-
-            maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
+        fetchMoreDataIfNeeded(buffer, index, maxIndex, 1).apply {
+            index = first
+            maxIndex = second
         }
 
-        val dateCount = buffer[index++].toUByte().toInt()
+        val dateCount = buffer[index].toUByte().toInt()
+        index += 1
         val fetchedDates = mutableListOf<Date>()
 
         while (fetchedDates.size != dateCount) {
-            // If the date was not fully received, fetch more data
-            if (maxIndex - index < DataSynchronizer.DATE_SIZE) {
-                // Move data to the beginning of the buffer if it is impossible to fit a date
-                if (buffer.size - index < DataSynchronizer.DATE_SIZE) {
-                    maxIndex = moveDataToStart(buffer, index, maxIndex)
-                    index = 0
-                }
-
-                maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
+            fetchMoreDataIfNeeded(buffer, index, maxIndex, DataSynchronizer.DATE_SIZE).apply {
+                index = first
+                maxIndex = second
             }
+
             fetchedDates.add(Date.fromByteArray(buffer, index))
             index += DataSynchronizer.DATE_SIZE
         }

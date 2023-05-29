@@ -5,7 +5,6 @@ import com.huggets.mynotes.data.Note
 import com.huggets.mynotes.sync.DataSynchronizer
 import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
 import com.huggets.mynotes.sync.DataSynchronizer.Companion.fromByteArray
-import com.huggets.mynotes.sync.buffer.Buffer.Companion.moveDataToStart
 import java.io.IOException
 import java.lang.Integer.min
 
@@ -27,13 +26,62 @@ class RequestedNoteReceivingBuffer(
     private lateinit var creationDate: Date
     private lateinit var modificationDate: Date
 
+    /**
+     * Read a packet containing a string.
+     *
+     * This packet start with an Int representing the number of bytes followed by the bytes.
+     *
+     * @param buffer The buffer to read from.
+     * @param index The current index of the buffer.
+     * @param maxIndex The max index of the buffer.
+     *
+     * @return A pair containing the new index and max index of the buffer.
+     */
+    private fun readString(
+        buffer: ByteArray,
+        index: Int,
+        maxIndex: Int,
+    ): Pair<Int, Int> {
+        var newIndex = index
+        var newMaxIndex = maxIndex
+
+        val headerSize = 4
+        fetchMoreDataIfNeeded(buffer, newIndex, newMaxIndex, headerSize).apply {
+            newIndex = first
+            newMaxIndex = second
+        }
+
+        val bytesCount = Int.fromByteArray(buffer, newIndex)
+        newIndex += 4
+
+        var bytesFetched = 0
+
+        while (bytesFetched != bytesCount) {
+            if (newMaxIndex == newIndex) {
+                newMaxIndex = fetchData(buffer, 0, buffer.size)
+                newIndex = 0
+            }
+
+            val bufferRemaining = newMaxIndex - newIndex
+            val remoteRemaining = bytesCount - bytesFetched
+
+            val bytesToCopy = min(bufferRemaining, remoteRemaining)
+
+            buffer.copyInto(stringBuffer, stringIndex, newIndex, newIndex + bytesToCopy)
+            stringIndex += bytesToCopy
+            newIndex += bytesToCopy
+            bytesFetched += bytesToCopy
+        }
+
+        return Pair(newIndex, newMaxIndex)
+    }
+
     @Throws(IOException::class)
     override fun readBuffer(
         buffer: ByteArray,
         bufferIndex: Int,
         bufferMaxIndex: Int
     ): Pair<Int, Int> {
-
         var index = bufferIndex
         var maxIndex = bufferMaxIndex
 
@@ -43,16 +91,9 @@ class RequestedNoteReceivingBuffer(
                     index++
 
                     val headerSize = 8
-                    // If not fully received, fetch more data
-                    if (maxIndex - index < headerSize) {
-                        // Move data to the beginning of the buffer if it is not possible to fetch all
-                        // the data
-                        if (buffer.size - index < headerSize) {
-                            maxIndex = moveDataToStart(buffer, index, maxIndex)
-                            index = 0
-                        }
-
-                        maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
+                    fetchMoreDataIfNeeded(buffer, index, maxIndex, headerSize).apply {
+                        index = first
+                        maxIndex = second
                     }
 
                     titleLength = Int.fromByteArray(buffer, index)
@@ -67,39 +108,9 @@ class RequestedNoteReceivingBuffer(
                 Header.REQUESTED_NOTES_TITLE_LENGTH.value -> {
                     index++
 
-                    val headerSize = 4
-                    // If header not fully received, fetch more data
-                    if (maxIndex - index < headerSize) {
-                        // Move data to the beginning of the buffer if it is not possible to fetch all
-                        // the data
-                        if (buffer.size - index < headerSize) {
-                            maxIndex = moveDataToStart(buffer, index, maxIndex)
-                            index = 0
-                        }
-
-                        maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
-                    }
-
-                    val bytesCount = Int.fromByteArray(buffer, index)
-                    index += 4
-
-                    var bytesFetched = 0
-
-                    while (bytesFetched != bytesCount) {
-                        if (maxIndex == index) {
-                            maxIndex = fetchData(buffer, 0, buffer.size)
-                            index = 0
-                        }
-
-                        val bufferRemaining = maxIndex - index
-                        val remoteRemaining = bytesCount - bytesFetched
-
-                        val bytesToCopy = min(bufferRemaining, remoteRemaining)
-
-                        buffer.copyInto(stringBuffer, stringIndex, index, index + bytesToCopy)
-                        stringIndex += bytesToCopy
-                        index += bytesToCopy
-                        bytesFetched += bytesToCopy
+                    readString(buffer, index, maxIndex).apply {
+                        index = first
+                        maxIndex = second
                     }
 
                     if (stringIndex == titleLength) {
@@ -112,40 +123,9 @@ class RequestedNoteReceivingBuffer(
                 Header.REQUESTED_NOTES_CONTENT_LENGTH.value -> {
                     index++
 
-                    val headerSize = 4
-
-                    // If header not fully received, fetch more data
-                    if (maxIndex - index < headerSize) {
-                        // Move data to the beginning of the buffer if it is not possible to fetch all
-                        // the data
-                        if (buffer.size - index < headerSize) {
-                            maxIndex = moveDataToStart(buffer, index, maxIndex)
-                            index = 0
-                        }
-
-                        maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
-                    }
-
-                    val bytesCount = Int.fromByteArray(buffer, index)
-                    index += 4
-
-                    var bytesFetched = 0
-
-                    while (bytesFetched != bytesCount) {
-                        if (maxIndex == index) {
-                            maxIndex = fetchData(buffer, 0, buffer.size)
-                            index = 0
-                        }
-
-                        val bufferRemaining = maxIndex - index
-                        val remoteRemaining = bytesCount - bytesFetched
-
-                        val bytesToCopy = min(bufferRemaining, remoteRemaining)
-
-                        buffer.copyInto(stringBuffer, stringIndex, index, index + bytesToCopy)
-                        stringIndex += bytesToCopy
-                        index += bytesToCopy
-                        bytesFetched += bytesToCopy
+                    readString(buffer, index, maxIndex).apply {
+                        index = first
+                        maxIndex = second
                     }
 
                     if (stringIndex == contentLength) {
@@ -157,17 +137,9 @@ class RequestedNoteReceivingBuffer(
                     index++
 
                     val headerSize = DataSynchronizer.DATE_SIZE
-
-                    // If header not fully received, fetch more data
-                    if (maxIndex - index < headerSize) {
-                        // Move data to the beginning of the buffer if it is not possible to fetch all
-                        // the data
-                        if (buffer.size - index < headerSize) {
-                            maxIndex = moveDataToStart(buffer, index, maxIndex)
-                            index = 0
-                        }
-
-                        maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
+                    fetchMoreDataIfNeeded(buffer, index, maxIndex, headerSize).apply {
+                        index = first
+                        maxIndex = second
                     }
 
                     creationDate = Date.fromByteArray(buffer, index)
@@ -178,17 +150,9 @@ class RequestedNoteReceivingBuffer(
                     index++
 
                     val headerSize = DataSynchronizer.DATE_SIZE
-
-                    // If header not fully received, fetch more data
-                    if (maxIndex - index < headerSize) {
-                        // Move data to the beginning of the buffer if it is not possible to fetch all
-                        // the data
-                        if (buffer.size - index < headerSize) {
-                            maxIndex = moveDataToStart(buffer, index, maxIndex)
-                            index = 0
-                        }
-
-                        maxIndex += fetchData(buffer, maxIndex, buffer.size - maxIndex)
+                    fetchMoreDataIfNeeded(buffer, index, maxIndex, headerSize).apply {
+                        index = first
+                        maxIndex = second
                     }
 
                     modificationDate = Date.fromByteArray(buffer, index)
@@ -209,9 +173,17 @@ class RequestedNoteReceivingBuffer(
                     throw IOException("Unknown header: ${buffer[index]}")
                 }
             }
+
+            // If the end of the buffer is reached, fetch more data because BUFFER_END is not
+            // received
+            if (index == maxIndex) {
+                maxIndex = fetchData(buffer, 0, buffer.size)
+                index = 0
+            }
         }
 
         index++
+
         sendData(confirmationBuffer, 0, confirmationBuffer.size)
 
         return Pair(index, maxIndex)

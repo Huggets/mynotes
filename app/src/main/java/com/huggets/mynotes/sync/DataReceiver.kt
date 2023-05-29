@@ -21,7 +21,7 @@ class DataReceiver(
     }
 
     private suspend fun receiveData(): Exception? {
-        val buffer = ByteArray(8096)
+        val buffer = ByteArray(58)
         var bufferIndex = 0
 
         var byteCount = try {
@@ -82,7 +82,7 @@ class DataReceiver(
                         return e
                     }
 
-                    if (sharedData.requestedNoteReceivingBuffer.remoteElementCount == sharedData.neededNotesSendingBuffer.elementsCount) {
+                    if (sharedData.requestedNoteReceivingBuffer.remoteElementCount == sharedData.neededNotesSendingBuffer.localElementCount) {
                         sharedData.hasReceivedAllRequestedNotes = true
                     }
                 }

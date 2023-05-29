@@ -14,11 +14,8 @@ interface Buffer {
          * @return The size of the data moved.
          */
         fun moveDataToStart(buffer: ByteArray, bufferIndex: Int, bufferMaxIndex: Int): Int {
-            val tmp = buffer.copyOf()
-            val copySize = bufferMaxIndex - bufferIndex
-            tmp.copyInto(buffer, 0, bufferIndex, bufferMaxIndex)
-
-            return copySize
+            buffer.copyInto(buffer, 0, bufferIndex, bufferMaxIndex)
+            return bufferMaxIndex - bufferIndex
         }
     }
 }

@@ -12,7 +12,7 @@ import com.huggets.mynotes.sync.buffer.RequestedNoteSendingBuffer.State.LAST_MOD
 import com.huggets.mynotes.sync.buffer.RequestedNoteSendingBuffer.State.TITLE
 
 class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
-    SendingBuffer<Note>(buffer) {
+    SendingBuffer<Note>(buffer, Header.REQUESTED_NOTES_COUNT) {
 
     private var state = END
 
@@ -20,18 +20,14 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
     private var bytesIndex = 0
 
     private val maxWritingSize
-        get() = buffer.size - bufferIndex
+        get() = buffer.size - bufferIndex - 1
 
-    override fun fill() {
-        bufferIndex = 0
-
-        fillElementCount(Header.REQUESTED_NOTES_COUNT)
-
-        while (bufferIndex != maxWritingSize && this.allDataNotSent) {
+    override fun fillBuffer() {
+        while (allDataNotSent) {
             when (state) {
                 END -> {
                     val headerSize = 9
-                    if (maxWritingSize - bufferIndex < headerSize) {
+                    if (maxWritingSize < headerSize) {
                         break
                     }
 
@@ -49,7 +45,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
 
                 TITLE -> {
                     val headerSize = 5
-                    if (maxWritingSize - bufferIndex < headerSize) {
+                    if (maxWritingSize < headerSize) {
                         break
                     }
 
@@ -59,7 +55,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
                     bufferIndex += 4
 
                     val copySize =
-                        Integer.min(bytes.size - bytesIndex, maxWritingSize - bufferIndex)
+                        Integer.min(bytes.size - bytesIndex, maxWritingSize)
                     buffer.addInt(copySize, sizeBufferIndex)
 
                     bytes.copyInto(buffer, bufferIndex, bytesIndex, bytesIndex + copySize)
@@ -76,7 +72,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
 
                 CONTENT -> {
                     val headerSize = 5
-                    if (maxWritingSize - bufferIndex < headerSize) {
+                    if (maxWritingSize < headerSize) {
                         break
                     }
 
@@ -86,7 +82,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
                     bufferIndex += 4
 
                     val copySize =
-                        Integer.min(bytes.size - bytesIndex, maxWritingSize - bufferIndex)
+                        Integer.min(bytes.size - bytesIndex, maxWritingSize)
                     buffer.addInt(copySize, sizeBufferIndex)
 
                     bytes.copyInto(buffer, bufferIndex, bytesIndex, bytesIndex + copySize)
@@ -101,7 +97,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
 
                 CREATION_DATE -> {
                     val headerSize = 1 + DataSynchronizer.DATE_SIZE
-                    if (maxWritingSize - bufferIndex < headerSize) {
+                    if (maxWritingSize < headerSize) {
                         break
                     }
 
@@ -116,7 +112,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
 
                 LAST_MODIFICATION_DATE -> {
                     val headerSize = 1 + DataSynchronizer.DATE_SIZE
-                    if (maxWritingSize - bufferIndex < headerSize + 1) {
+                    if (maxWritingSize < headerSize) {
                         break
                     }
 
@@ -130,6 +126,7 @@ class RequestedNoteSendingBuffer(buffer: ByteArray = ByteArray(1024)) :
                 }
             }
         }
+
         buffer[bufferIndex] = Header.REQUESTED_NOTES_BUFFER_END.value
         bufferIndex += 1
     }
