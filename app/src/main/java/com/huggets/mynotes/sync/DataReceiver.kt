@@ -21,48 +21,40 @@ class DataReceiver(
     }
 
     private suspend fun receiveData(): Exception? {
-        val buffer = ByteArray(58)
-        var bufferIndex = 0
-
-        var byteCount = try {
-            sharedData.bluetoothConnectionManager.readData(buffer, bufferIndex)
+        try {
+            sharedData.receivingBuffer.fetchDataFromStart()
         } catch (e: IOException) {
             return e
         }
 
-        while (byteCount != -1) {
-            when (buffer[bufferIndex]) {
+        while (sharedData.receivingBuffer.bytesFetched != -1) {
+            when (sharedData.receivingBuffer.lookByte()) {
                 Header.DATES.value, Header.DATES_COUNT.value -> {
                     try {
-                        sharedData.datesReceivingBuffer.read(buffer, bufferIndex, byteCount).apply {
-                            bufferIndex = first
-                            byteCount = second
-                        }
+                        sharedData.datesReceivingBuffer.read()
                     } catch (e: IOException) {
                         return e
                     }
                 }
 
                 Header.DATES_BUFFER_RECEIVED.value -> {
+                    sharedData.receivingBuffer.skip(1)
+
                     sharedData.datesSendingChannel.send(Unit)
-                    bufferIndex++
                 }
 
                 Header.NEEDED_NOTE.value, Header.NEEDED_NOTES_COUNT.value -> {
                     try {
-                        sharedData.neededNotesReceivingBuffer.read(buffer, bufferIndex, byteCount)
-                            .apply {
-                                bufferIndex = first
-                                byteCount = second
-                            }
+                        sharedData.neededNotesReceivingBuffer.read()
                     } catch (e: IOException) {
                         return e
                     }
                 }
 
                 Header.NEEDED_NOTE_BUFFER_RECEIVED.value -> {
+                    sharedData.receivingBuffer.skip(1)
+
                     sharedData.neededNotesChannel.send(Unit)
-                    bufferIndex++
                 }
 
                 Header.REQUESTED_NOTES.value,
@@ -73,11 +65,7 @@ class DataReceiver(
                 Header.REQUESTED_NOTES_LAST_MODIFICATION_DATE.value,
                 Header.REQUESTED_NOTES_BUFFER_END.value -> {
                     try {
-                        sharedData.requestedNoteReceivingBuffer.read(buffer, bufferIndex, byteCount)
-                            .apply {
-                                bufferIndex = first
-                                byteCount = second
-                            }
+                        sharedData.requestedNoteReceivingBuffer.read()
                     } catch (e: IOException) {
                         return e
                     }
@@ -88,39 +76,40 @@ class DataReceiver(
                 }
 
                 Header.REQUESTED_NOTES_BUFFER_RECEIVED.value -> {
+                    sharedData.receivingBuffer.skip(1)
+
                     sharedData.requestedNoteChannel.send(Unit)
-                    bufferIndex++
                 }
 
                 Header.DATA_END.value -> {
+                    sharedData.receivingBuffer.skip(1)
+
                     sharedData.hasOtherDeviceSentEverything = true
                     val dataEndReceived = ByteArray(1) { Header.DATA_END_RECEIVED.value }
                     sharedData.bluetoothConnectionManager.writeData(dataEndReceived)
-                    bufferIndex++
                 }
 
                 Header.DATA_END_RECEIVED.value -> {
+                    sharedData.receivingBuffer.skip(1)
+
                     sharedData.dataEndChannel.send(Unit)
-                    bufferIndex++
                     sharedData.hasOtherDeviceReceivedDataEnd = true
                 }
 
                 else -> {
-                    return IOException("Unknown header: ${buffer[bufferIndex]}")
+                    return IOException("Unknown header: ${sharedData.receivingBuffer.lookByte()}")
                 }
             }
 
-            if (byteCount == bufferIndex) {
+            if (sharedData.receivingBuffer.bytesFetchedAvailable() == 0) {
                 if (sharedData.hasOtherDeviceSentEverything && sharedData.hasReceivedAllRequestedNotes && sharedData.hasOtherDeviceReceivedDataEnd) {
                     return null
                 }
-                byteCount = try {
-                    sharedData.bluetoothConnectionManager.readData(buffer)
+                try {
+                    sharedData.receivingBuffer.fetchDataFromStart()
                 } catch (e: IOException) {
                     return e
                 }
-
-                bufferIndex = 0
             }
         }
 

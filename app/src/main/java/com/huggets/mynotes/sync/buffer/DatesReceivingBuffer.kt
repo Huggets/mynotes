@@ -3,57 +3,32 @@ package com.huggets.mynotes.sync.buffer
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.sync.DataSynchronizer
 import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
-import com.huggets.mynotes.sync.DataSynchronizer.Companion.fromByteArray
 
-class DatesReceivingBuffer(
-    fetch: (ByteArray, Int, Int) -> Int,
-    send: (ByteArray, Int, Int) -> Unit,
-) : ReceivingBuffer<Pair<Date, Date>>(fetch, send) {
-
+class DatesReceivingBuffer(buffer: RemoteDataBuffer) : ReceivingBuffer<Pair<Date, Date>>(buffer) {
     override val fetchedData: List<Pair<Date, Date>>
         get() = remoteCreationDates
 
     private val remoteCreationDates = mutableListOf<Pair<Date, Date>>()
 
-    override fun readBuffer(
-        buffer: ByteArray,
-        bufferIndex: Int,
-        bufferMaxIndex: Int
-    ): Pair<Int, Int> {
+    override fun readBuffer() {
+        buffer.skip(1) // Skip the header
+        buffer.fetchMoreDataIfNeeded(1)
 
-        var index = bufferIndex
-        var maxIndex = bufferMaxIndex
-
-        index++
-
-        fetchMoreDataIfNeeded(buffer, index, maxIndex, 1).apply {
-            index = first
-            maxIndex = second
-        }
-
-        val dateCount = buffer[index].toUByte().toInt()
-        index += 1
         val fetchedDates = mutableListOf<Pair<Date, Date>>()
+        val datesToFetch = buffer.getUByte().toInt()
 
-        while (fetchedDates.size != dateCount) {
-            fetchMoreDataIfNeeded(buffer, index, maxIndex, DataSynchronizer.DATE_SIZE * 2).apply {
-                index = first
-                maxIndex = second
-            }
+        while (fetchedDates.size != datesToFetch) {
+            buffer.fetchMoreDataIfNeeded(DataSynchronizer.DATE_SIZE * 2)
 
-            val creationDate = Date.fromByteArray(buffer, index)
-            index += DataSynchronizer.DATE_SIZE
-            val modificationDate = Date.fromByteArray(buffer, index)
-            index += DataSynchronizer.DATE_SIZE
+            val creationDate = buffer.getDate()
+            val modificationDate = buffer.getDate()
 
             fetchedDates.add(Pair(creationDate, modificationDate))
         }
 
         remoteCreationDates.addAll(fetchedDates)
 
-        sendData(dateReceivedBuffer, 0, dateReceivedBuffer.size)
-
-        return Pair(index, maxIndex)
+        buffer.sendBytes(dateReceivedBuffer, 0, dateReceivedBuffer.size)
     }
 
     companion object {

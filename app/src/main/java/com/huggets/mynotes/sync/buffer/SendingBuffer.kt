@@ -8,7 +8,7 @@ import java.io.IOException
 abstract class SendingBuffer<out InputType>(
     protected var buffer: ByteArray = ByteArray(1024),
     private val countHeader: DataSynchronizer.Companion.Header,
-) : Buffer {
+) {
 
     val currentElement: InputType
         get() = localData[localDataIndex]

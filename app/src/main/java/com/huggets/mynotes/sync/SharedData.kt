@@ -8,6 +8,7 @@ import com.huggets.mynotes.sync.buffer.DatesReceivingBuffer
 import com.huggets.mynotes.sync.buffer.DatesSendingBuffer
 import com.huggets.mynotes.sync.buffer.NeededNotesReceivingBuffer
 import com.huggets.mynotes.sync.buffer.NeededNotesSendingBuffer
+import com.huggets.mynotes.sync.buffer.RemoteDataBuffer
 import com.huggets.mynotes.sync.buffer.RequestedNoteReceivingBuffer
 import com.huggets.mynotes.sync.buffer.RequestedNoteSendingBuffer
 import kotlinx.coroutines.channels.Channel
@@ -18,6 +19,8 @@ class SharedData(
     val deletedNotes: List<DeletedNote>,
     val bluetoothConnectionManager: BluetoothConnectionManager,
 ) {
+    val receivingBuffer: RemoteDataBuffer
+
     val datesReceivingBuffer: DatesReceivingBuffer
     val neededNotesReceivingBuffer: NeededNotesReceivingBuffer
     val requestedNoteReceivingBuffer: RequestedNoteReceivingBuffer
@@ -42,11 +45,12 @@ class SharedData(
         val send: (ByteArray, Int, Int) -> Unit = { buffer, bufferIndex, maxIndex ->
             bluetoothConnectionManager.writeData(buffer, bufferIndex, maxIndex)
         }
-        val sendingBuffer = ByteArray(8096)
+        receivingBuffer = RemoteDataBuffer(ByteArray(59), fetch, send)
+        val sendingBuffer = ByteArray(58)
 
-        datesReceivingBuffer = DatesReceivingBuffer(fetch, send)
-        neededNotesReceivingBuffer = NeededNotesReceivingBuffer(fetch, send)
-        requestedNoteReceivingBuffer = RequestedNoteReceivingBuffer(fetch, send)
+        datesReceivingBuffer = DatesReceivingBuffer(receivingBuffer)
+        neededNotesReceivingBuffer = NeededNotesReceivingBuffer(receivingBuffer)
+        requestedNoteReceivingBuffer = RequestedNoteReceivingBuffer(receivingBuffer)
 
         datesSendingBuffer = DatesSendingBuffer(sendingBuffer)
         neededNotesSendingBuffer = NeededNotesSendingBuffer(sendingBuffer)

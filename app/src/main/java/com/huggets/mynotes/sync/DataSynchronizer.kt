@@ -121,24 +121,5 @@ class DataSynchronizer(
                 addInt(millisecond, offset + 24)
             }
         }
-
-        fun Int.Companion.fromByteArray(byteArray: ByteArray, off: Int): Int {
-            return (byteArray[off].toInt() and 0xFF shl 24) or
-                    (byteArray[off + 1].toInt() and 0xFF shl 16) or
-                    (byteArray[off + 2].toInt() and 0xFF shl 8) or
-                    (byteArray[off + 3].toInt() and 0xFF)
-        }
-
-        fun Date.Companion.fromByteArray(byteArray: ByteArray, offset: Int): Date {
-            return Date(
-                year = Int.fromByteArray(byteArray, offset),
-                month = Int.fromByteArray(byteArray, offset + 4),
-                day = Int.fromByteArray(byteArray, offset + 8),
-                hour = Int.fromByteArray(byteArray, offset + 12),
-                minute = Int.fromByteArray(byteArray, offset + 16),
-                second = Int.fromByteArray(byteArray, offset + 20),
-                millisecond = Int.fromByteArray(byteArray, offset + 24),
-            )
-        }
     }
 }
