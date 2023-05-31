@@ -104,6 +104,15 @@ class DataReceiver(
                         sharedData.associationsSender.confirmDataReceived()
                     }
 
+                    Header.DELETED_NOTES.value, Header.DELETED_NOTES_COUNT.value -> {
+                        sharedData.deletedNotesReceiver.read()
+                    }
+
+                    Header.DELETED_NOTES_BUFFER_RECEIVED.value -> {
+                        sharedData.nextByte()
+                        sharedData.deletedNotesSender.confirmDataReceived()
+                    }
+
                     Header.DATA_END.value -> {
                         sharedData.nextByte()
 

@@ -30,6 +30,7 @@ class DataSender(
                 ::requestNeededNoteDates,
                 ::sendRequestedNotes,
                 ::sendAssociations,
+                ::sendDeletedNotes,
                 ::sendEndOfData,
             )
 
@@ -181,6 +182,14 @@ class DataSender(
         sharedData.associationsSender.setData(requestedNoteAssociations)
 
         return send(sharedData.associationsSender)
+    }
+
+    private suspend fun sendDeletedNotes(): Exception? {
+        val deletedNotes = sharedData.deletedNotes
+
+        sharedData.deletedNotesSender.setData(deletedNotes)
+
+        return send(sharedData.deletedNotesSender)
     }
 
     /**

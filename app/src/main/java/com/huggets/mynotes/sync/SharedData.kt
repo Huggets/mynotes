@@ -7,6 +7,8 @@ import com.huggets.mynotes.sync.buffer.AssociationsBufferReceiver
 import com.huggets.mynotes.sync.buffer.AssociationsBufferSender
 import com.huggets.mynotes.sync.buffer.DatesBufferReceiver
 import com.huggets.mynotes.sync.buffer.DatesBufferSender
+import com.huggets.mynotes.sync.buffer.DeletedNotesReceiver
+import com.huggets.mynotes.sync.buffer.DeletedNotesSender
 import com.huggets.mynotes.sync.buffer.NeededNotesBufferReceiver
 import com.huggets.mynotes.sync.buffer.NeededNotesBufferSender
 import com.huggets.mynotes.sync.buffer.ReceivingBuffer
@@ -62,6 +64,10 @@ class SharedData(
      */
     val associationsReceiver = AssociationsBufferReceiver(receivingBuffer)
 
+    /**
+     * The deleted notes receiver.
+     */
+    val deletedNotesReceiver = DeletedNotesReceiver(receivingBuffer)
 
     /**
      * The dates sender.
@@ -82,6 +88,11 @@ class SharedData(
      * The associations sender.
      */
     val associationsSender = AssociationsBufferSender(sendingBuffer)
+
+    /**
+     * The deleted notes sender.
+     */
+    val deletedNotesSender = DeletedNotesSender(sendingBuffer)
 
     /**
      * The data end sender.
@@ -114,6 +125,7 @@ class SharedData(
         neededNotesSender.stop()
         requestedNoteSender.stop()
         associationsSender.stop()
+        deletedNotesSender.stop()
         dataEndSender.stop()
     }
 

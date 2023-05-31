@@ -1,5 +1,6 @@
 package com.huggets.mynotes.sync
 
+import com.huggets.mynotes.data.DeletedNote
 import com.huggets.mynotes.data.DeletedNoteRepository
 import com.huggets.mynotes.data.NoteAssociationRepository
 import com.huggets.mynotes.data.NoteRepository
@@ -126,11 +127,59 @@ class DataSynchronizer(
      * @param sharedData The shared data containing the received data.
      */
     private suspend fun updateData(sharedData: SharedData) {
-        sharedData.requestedNoteReceiver.obtain().forEach {
-            noteRepository.insert(it)
+        deleteNotes(sharedData)
+        insertNotes(sharedData)
+    }
+
+    /**
+     * Deletes the notes that were deleted on the remote device. It also deletes the children
+     * (even if they were created on this device after the parent was deleted on the remote device).
+     *
+     * Used by [updateData].
+     *
+     * @param sharedData The shared data containing the received data.
+     */
+    private suspend fun deleteNotes(sharedData: SharedData) {
+        sharedData.deletedNotesReceiver.obtain().forEach { deletedNote ->
+            noteRepository.getChildren(deletedNote.creationDate).forEach { child ->
+                noteRepository.delete(child.creationDate)
+                deletedNoteRepository.insert(DeletedNote(child.creationDate))
+                noteAssociationRepository.deleteByChildCreationDate(child.creationDate)
+            }
+
+            noteRepository.delete(deletedNote.creationDate)
+            deletedNoteRepository.insert(DeletedNote(deletedNote.creationDate))
+        }
+    }
+
+    /**
+     * Inserts the notes and associations that were created on the remote device.
+     */
+    private suspend fun insertNotes(sharedData: SharedData) {
+        // Get the last deleted notes to avoid inserting notes that were deleted on this device
+        val updatedDeletedNotes = deletedNoteRepository.getAllDeletedNotes()
+
+        sharedData.requestedNoteReceiver.obtain().forEach { note ->
+            // Try to find if the note was deleted
+            val deletedNote = updatedDeletedNotes.find { deletedNote ->
+                deletedNote.creationDate == note.creationDate
+            }
+
+            // If the note was not deleted, insert it
+            if (deletedNote == null) {
+                noteRepository.insert(note)
+            }
         }
         sharedData.associationsReceiver.obtain().forEach {
-            noteAssociationRepository.insert(it)
+            // Try to find if the child was deleted
+            val deletedNote = updatedDeletedNotes.find { deletedNote ->
+                deletedNote.creationDate == it.childCreationDate
+            }
+
+            // If the child was not deleted, insert the association
+            if (deletedNote == null) {
+                noteAssociationRepository.insert(it)
+            }
         }
     }
 }

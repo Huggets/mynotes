@@ -113,4 +113,19 @@ enum class Header(
      * The receiver sends this header to indicate that it has received the note associations.
      */
     ASSOCIATIONS_BUFFER_RECEIVED(0x12),
+
+    /**
+     * The sender sends this header to indicate that it is sending deleted notes.
+     */
+    DELETED_NOTES(0x13),
+
+    /**
+     * The sender sends this header to indicate that it is sending the count of deleted notes.
+     */
+    DELETED_NOTES_COUNT(0x14),
+
+    /**
+     * The receiver sends this header to indicate that it has received the deleted notes.
+     */
+    DELETED_NOTES_BUFFER_RECEIVED(0x15),
 }
