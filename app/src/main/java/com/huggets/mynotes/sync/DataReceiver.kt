@@ -1,6 +1,5 @@
 package com.huggets.mynotes.sync
 
-import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -8,6 +7,10 @@ import java.io.IOException
 class DataReceiver(
     private val sharedData: SharedData,
 ) {
+    private var hasOtherDeviceSentEverything = false
+    private var hasReceivedAllRequestedNotes = false
+    private var hasOtherDeviceReceivedDataEnd = false
+
     fun start(coroutineScope: CoroutineScope, onFinish: (Exception?) -> Unit) {
         coroutineScope.launch {
             val exception = receiveData()
@@ -22,95 +25,71 @@ class DataReceiver(
 
     private suspend fun receiveData(): Exception? {
         try {
-            sharedData.receivingBuffer.fetchDataFromStart()
+            sharedData.fetchData()
+
+            while (sharedData.bytesFetched != -1) {
+                when (sharedData.currentByte) {
+                    Header.DATES.value, Header.DATES_COUNT.value -> {
+                        sharedData.datesReceiver.read()
+                    }
+
+                    Header.DATES_BUFFER_RECEIVED.value -> {
+                        sharedData.nextByte()
+                        sharedData.datesSender.confirmDataReceived()
+                    }
+
+                    Header.NEEDED_NOTES.value, Header.NEEDED_NOTES_COUNT.value -> {
+                        sharedData.neededNotesReceiver.read()
+                    }
+
+                    Header.NEEDED_NOTES_BUFFER_RECEIVED.value -> {
+                        sharedData.nextByte()
+                        sharedData.neededNotesSender.confirmDataReceived()
+                    }
+
+                    Header.REQUESTED_NOTES.value,
+                    Header.REQUESTED_NOTES_COUNT.value,
+                    Header.REQUESTED_NOTES_TITLE_LENGTH.value,
+                    Header.REQUESTED_NOTES_CONTENT_LENGTH.value,
+                    Header.REQUESTED_NOTES_CREATION_DATE.value,
+                    Header.REQUESTED_NOTES_LAST_MODIFICATION_DATE.value,
+                    Header.REQUESTED_NOTES_BUFFER_END.value -> {
+                        sharedData.requestedNoteReceiver.read()
+
+                        if (sharedData.requestedNoteReceiver.remoteElementCount == sharedData.neededNotesSender.localElementCount) {
+                            hasReceivedAllRequestedNotes = true
+                        }
+                    }
+
+                    Header.REQUESTED_NOTES_BUFFER_RECEIVED.value -> {
+                        sharedData.nextByte()
+                        sharedData.requestedNoteSender.confirmDataReceived()
+                    }
+
+                    Header.DATA_END.value -> {
+                        sharedData.nextByte()
+
+                        hasOtherDeviceSentEverything = true
+                        val dataEndReceived = ByteArray(1) { Header.DATA_END_RECEIVED.value }
+                        sharedData.sendData(dataEndReceived, 0, 1)
+                    }
+
+                    Header.DATA_END_RECEIVED.value -> {
+                        sharedData.nextByte()
+                        sharedData.dataEndSender.confirmDataReceived()
+                        hasOtherDeviceReceivedDataEnd = true
+                    }
+                }
+
+                if (sharedData.availableBytes == 0) {
+                    if (hasOtherDeviceSentEverything && hasReceivedAllRequestedNotes && hasOtherDeviceReceivedDataEnd) {
+                        return null
+                    }
+                    sharedData.fetchData()
+                }
+            }
         } catch (e: IOException) {
             return e
-        }
-
-        while (sharedData.receivingBuffer.bytesFetched != -1) {
-            when (sharedData.receivingBuffer.lookByte()) {
-                Header.DATES.value, Header.DATES_COUNT.value -> {
-                    try {
-                        sharedData.datesReceivingBuffer.read()
-                    } catch (e: IOException) {
-                        return e
-                    }
-                }
-
-                Header.DATES_BUFFER_RECEIVED.value -> {
-                    sharedData.receivingBuffer.skip(1)
-
-                    sharedData.datesSendingChannel.send(Unit)
-                }
-
-                Header.NEEDED_NOTE.value, Header.NEEDED_NOTES_COUNT.value -> {
-                    try {
-                        sharedData.neededNotesReceivingBuffer.read()
-                    } catch (e: IOException) {
-                        return e
-                    }
-                }
-
-                Header.NEEDED_NOTE_BUFFER_RECEIVED.value -> {
-                    sharedData.receivingBuffer.skip(1)
-
-                    sharedData.neededNotesChannel.send(Unit)
-                }
-
-                Header.REQUESTED_NOTES.value,
-                Header.REQUESTED_NOTES_COUNT.value,
-                Header.REQUESTED_NOTES_TITLE_LENGTH.value,
-                Header.REQUESTED_NOTES_CONTENT_LENGTH.value,
-                Header.REQUESTED_NOTES_CREATION_DATE.value,
-                Header.REQUESTED_NOTES_LAST_MODIFICATION_DATE.value,
-                Header.REQUESTED_NOTES_BUFFER_END.value -> {
-                    try {
-                        sharedData.requestedNoteReceivingBuffer.read()
-                    } catch (e: IOException) {
-                        return e
-                    }
-
-                    if (sharedData.requestedNoteReceivingBuffer.remoteElementCount == sharedData.neededNotesSendingBuffer.localElementCount) {
-                        sharedData.hasReceivedAllRequestedNotes = true
-                    }
-                }
-
-                Header.REQUESTED_NOTES_BUFFER_RECEIVED.value -> {
-                    sharedData.receivingBuffer.skip(1)
-
-                    sharedData.requestedNoteChannel.send(Unit)
-                }
-
-                Header.DATA_END.value -> {
-                    sharedData.receivingBuffer.skip(1)
-
-                    sharedData.hasOtherDeviceSentEverything = true
-                    val dataEndReceived = ByteArray(1) { Header.DATA_END_RECEIVED.value }
-                    sharedData.bluetoothConnectionManager.writeData(dataEndReceived)
-                }
-
-                Header.DATA_END_RECEIVED.value -> {
-                    sharedData.receivingBuffer.skip(1)
-
-                    sharedData.dataEndChannel.send(Unit)
-                    sharedData.hasOtherDeviceReceivedDataEnd = true
-                }
-
-                else -> {
-                    return IOException("Unknown header: ${sharedData.receivingBuffer.lookByte()}")
-                }
-            }
-
-            if (sharedData.receivingBuffer.bytesFetchedAvailable() == 0) {
-                if (sharedData.hasOtherDeviceSentEverything && sharedData.hasReceivedAllRequestedNotes && sharedData.hasOtherDeviceReceivedDataEnd) {
-                    return null
-                }
-                try {
-                    sharedData.receivingBuffer.fetchDataFromStart()
-                } catch (e: IOException) {
-                    return e
-                }
-            }
         }
 
         return Exception("Connection closed unexpectedly")

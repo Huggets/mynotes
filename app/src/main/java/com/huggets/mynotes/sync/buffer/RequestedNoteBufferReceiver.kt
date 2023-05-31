@@ -2,12 +2,11 @@ package com.huggets.mynotes.sync.buffer
 
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.Note
-import com.huggets.mynotes.sync.DataSynchronizer
-import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
+import com.huggets.mynotes.sync.Header
 import java.io.IOException
 import java.lang.Integer.min
 
-class RequestedNoteReceivingBuffer(buffer: RemoteDataBuffer) : ReceivingBuffer<Note>(buffer) {
+class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note>(buffer) {
     override val fetchedData: List<Note>
         get() = neededNotes
 
@@ -28,7 +27,7 @@ class RequestedNoteReceivingBuffer(buffer: RemoteDataBuffer) : ReceivingBuffer<N
      *
      * @param buffer The buffer to read from.
      */
-    private fun readString(buffer: RemoteDataBuffer) {
+    private fun readString(buffer: ReceivingBuffer) {
         val headerSize = 4
         buffer.fetchMoreDataIfNeeded(headerSize)
 
@@ -85,14 +84,14 @@ class RequestedNoteReceivingBuffer(buffer: RemoteDataBuffer) : ReceivingBuffer<N
                 }
 
                 Header.REQUESTED_NOTES_CREATION_DATE.value -> {
-                    val headerSize = DataSynchronizer.DATE_SIZE
+                    val headerSize = Constants.DATE_SIZE
                     buffer.fetchMoreDataIfNeeded(headerSize)
 
                     creationDate = buffer.getDate()
                 }
 
                 Header.REQUESTED_NOTES_LAST_MODIFICATION_DATE.value -> {
-                    val headerSize = DataSynchronizer.DATE_SIZE
+                    val headerSize = Constants.DATE_SIZE
                     buffer.fetchMoreDataIfNeeded(headerSize)
 
                     modificationDate = buffer.getDate()

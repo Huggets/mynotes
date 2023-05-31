@@ -1,10 +1,9 @@
 package com.huggets.mynotes.sync.buffer
 
 import com.huggets.mynotes.data.Date
-import com.huggets.mynotes.sync.DataSynchronizer
-import com.huggets.mynotes.sync.DataSynchronizer.Companion.Header
+import com.huggets.mynotes.sync.Header
 
-class DatesReceivingBuffer(buffer: RemoteDataBuffer) : ReceivingBuffer<Pair<Date, Date>>(buffer) {
+class DatesBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Pair<Date, Date>>(buffer) {
     override val fetchedData: List<Pair<Date, Date>>
         get() = remoteCreationDates
 
@@ -18,7 +17,7 @@ class DatesReceivingBuffer(buffer: RemoteDataBuffer) : ReceivingBuffer<Pair<Date
         val datesToFetch = buffer.getUByte().toInt()
 
         while (fetchedDates.size != datesToFetch) {
-            buffer.fetchMoreDataIfNeeded(DataSynchronizer.DATE_SIZE * 2)
+            buffer.fetchMoreDataIfNeeded(Constants.DATE_SIZE * 2)
 
             val creationDate = buffer.getDate()
             val modificationDate = buffer.getDate()

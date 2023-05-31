@@ -1,66 +1,60 @@
 package com.huggets.mynotes.sync
 
-import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
 import com.huggets.mynotes.data.DeletedNote
 import com.huggets.mynotes.data.Note
 import com.huggets.mynotes.data.NoteAssociation
-import com.huggets.mynotes.sync.buffer.DatesReceivingBuffer
-import com.huggets.mynotes.sync.buffer.DatesSendingBuffer
-import com.huggets.mynotes.sync.buffer.NeededNotesReceivingBuffer
-import com.huggets.mynotes.sync.buffer.NeededNotesSendingBuffer
-import com.huggets.mynotes.sync.buffer.RemoteDataBuffer
-import com.huggets.mynotes.sync.buffer.RequestedNoteReceivingBuffer
-import com.huggets.mynotes.sync.buffer.RequestedNoteSendingBuffer
-import kotlinx.coroutines.channels.Channel
+import com.huggets.mynotes.sync.buffer.DatesBufferReceiver
+import com.huggets.mynotes.sync.buffer.DatesBufferSender
+import com.huggets.mynotes.sync.buffer.NeededNotesBufferReceiver
+import com.huggets.mynotes.sync.buffer.NeededNotesBufferSender
+import com.huggets.mynotes.sync.buffer.ReceivingBuffer
+import com.huggets.mynotes.sync.buffer.RequestedNoteBufferReceiver
+import com.huggets.mynotes.sync.buffer.RequestedNoteBufferSender
+import com.huggets.mynotes.sync.buffer.SendingBuffer
+
+typealias FetchData = (buffer: ByteArray, offset: Int, length: Int) -> Int
+typealias SendData = (buffer: ByteArray, offset: Int, length: Int) -> Unit
 
 class SharedData(
     val notes: List<Note>,
     val noteAssociations: List<NoteAssociation>,
     val deletedNotes: List<DeletedNote>,
-    val bluetoothConnectionManager: BluetoothConnectionManager,
+    fetchData: FetchData,
+    val sendData: SendData,
 ) {
-    val receivingBuffer: RemoteDataBuffer
+    private val receivingBuffer = ReceivingBuffer(ByteArray(8096), fetchData, sendData)
+    private val sendingBuffer = SendingBuffer(ByteArray(8096), sendData)
 
-    val datesReceivingBuffer: DatesReceivingBuffer
-    val neededNotesReceivingBuffer: NeededNotesReceivingBuffer
-    val requestedNoteReceivingBuffer: RequestedNoteReceivingBuffer
+    val datesReceiver = DatesBufferReceiver(receivingBuffer)
+    val neededNotesReceiver = NeededNotesBufferReceiver(receivingBuffer)
+    val requestedNoteReceiver = RequestedNoteBufferReceiver(receivingBuffer)
 
-    val datesSendingBuffer: DatesSendingBuffer
-    val neededNotesSendingBuffer: NeededNotesSendingBuffer
-    val requestedNoteSendingBuffer: RequestedNoteSendingBuffer
+    val datesSender = DatesBufferSender(sendingBuffer)
+    val neededNotesSender = NeededNotesBufferSender(sendingBuffer)
+    val requestedNoteSender = RequestedNoteBufferSender(sendingBuffer)
+    val dataEndSender = DataEndSender(sendData)
 
-    val datesSendingChannel = Channel<Unit>(Channel.UNLIMITED)
-    val neededNotesChannel = Channel<Unit>(Channel.UNLIMITED)
-    val requestedNoteChannel = Channel<Unit>(Channel.UNLIMITED)
-    val dataEndChannel = Channel<Unit>(Channel.UNLIMITED)
+    val bytesFetched: Int
+        get() = receivingBuffer.bytesFetched
 
-    var hasOtherDeviceSentEverything = false
-    var hasReceivedAllRequestedNotes = false
-    var hasOtherDeviceReceivedDataEnd = false
+    val currentByte: Byte
+        get() = receivingBuffer.lookByte()
 
-    init {
-        val fetch: (ByteArray, Int, Int) -> Int = { buffer, bufferIndex, maxIndex ->
-            bluetoothConnectionManager.readData(buffer, bufferIndex, maxIndex)
-        }
-        val send: (ByteArray, Int, Int) -> Unit = { buffer, bufferIndex, maxIndex ->
-            bluetoothConnectionManager.writeData(buffer, bufferIndex, maxIndex)
-        }
-        receivingBuffer = RemoteDataBuffer(ByteArray(59), fetch, send)
-        val sendingBuffer = ByteArray(58)
-
-        datesReceivingBuffer = DatesReceivingBuffer(receivingBuffer)
-        neededNotesReceivingBuffer = NeededNotesReceivingBuffer(receivingBuffer)
-        requestedNoteReceivingBuffer = RequestedNoteReceivingBuffer(receivingBuffer)
-
-        datesSendingBuffer = DatesSendingBuffer(sendingBuffer)
-        neededNotesSendingBuffer = NeededNotesSendingBuffer(sendingBuffer)
-        requestedNoteSendingBuffer = RequestedNoteSendingBuffer(sendingBuffer)
-    }
+    val availableBytes: Int
+        get() = receivingBuffer.bytesFetchedAvailable()
 
     fun stop() {
-        datesSendingChannel.close()
-        neededNotesChannel.close()
-        requestedNoteChannel.close()
-        dataEndChannel.close()
+        datesSender.close()
+        neededNotesSender.close()
+        requestedNoteSender.close()
+        dataEndSender.close()
+    }
+
+    fun fetchData() {
+        receivingBuffer.fetchDataFromStart()
+    }
+
+    fun nextByte() {
+        receivingBuffer.skip(1)
     }
 }

@@ -1,64 +1,129 @@
 package com.huggets.mynotes.sync.buffer
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import com.huggets.mynotes.data.Date
 import java.io.IOException
 
-abstract class ReceivingBuffer<OutputType>(
-    protected val buffer: RemoteDataBuffer,
-) {
-    protected abstract val fetchedData: List<OutputType>
 
-    var remoteElementCount: Int = 0
+class ReceivingBuffer(
+    private val buffer: ByteArray,
+
+    @get:Throws(IOException::class)
+    private val fetch: (bytes: ByteArray, offset: Int, length: Int) -> Int,
+
+    @get:Throws(IOException::class)
+    private val send: (bytes: ByteArray, offset: Int, length: Int) -> Unit,
+) {
+    private var index: Int = 0
+    private var maxIndex: Int = 0
+
+    val size: Int
+        get() = buffer.size
+
+    var bytesFetched: Int = 0
         private set
 
-    private var remoteElementCountFetched: Boolean = false
+    fun moveDataToStart() {
+        buffer.copyInto(buffer, 0, index, maxIndex)
+        maxIndex -= index
+        index = 0
+    }
 
-    private val allDataReceived: Boolean
-        get() = remoteElementCountFetched && remoteElementCount == fetchedData.size
-
-    private val mutex = Mutex(true)
-
-    @Throws(IOException::class)
-    protected abstract fun readBuffer()
-
-    fun read() {
-        fetchElementCount()
-        readBuffer()
-
-        if (allDataReceived && mutex.isLocked) {
-            mutex.unlock()
+    fun getBytes(length: Int): ByteArray {
+        return buffer.copyOfRange(index, index + length).also {
+            index += length
         }
     }
 
-    private fun fetchElementCount() {
-        if (!remoteElementCountFetched) {
-            buffer.skip(1) // Skip the header
+    fun getByte(): Byte {
+        return buffer[index++]
+    }
 
-            if (buffer.bytesFetchedAvailable() < 4) {
-                if (buffer.bytesLeft() < 4) {
-                    buffer.moveDataToStart()
-                }
+    // TODO Maybe do not use ubyte
+    fun getUByte(): UByte {
+        return buffer[index++].toUByte()
+    }
 
-                buffer.fetchData()
-            }
+    fun getInt(): Int {
+        return (buffer[index++].toInt() and 0xFF shl 24) or
+                (buffer[index++].toInt() and 0xFF shl 16) or
+                (buffer[index++].toInt() and 0xFF shl 8) or
+                (buffer[index++].toInt() and 0xFF)
+    }
 
-            remoteElementCount = buffer.getInt()
-
-            remoteElementCountFetched = true
-        }
+    fun getDate(): Date {
+        return Date(
+            year = getInt(),
+            month = getInt(),
+            day = getInt(),
+            hour = getInt(),
+            minute = getInt(),
+            second = getInt(),
+            millisecond = getInt(),
+        )
     }
 
     /**
-     * Obtain the data that was fetched.
-     *
-     * If the data is not fully received, it suspends until it is.
-     *
-     * @return The data that was fetched.
+     * Returns the byte at the current index without moving the index.
      */
-    suspend fun obtain(): List<OutputType> {
-        mutex.withLock {
-            return fetchedData
+    fun lookByte(): Byte {
+        return buffer[index]
+    }
+
+    fun skip(length: Int) {
+        index += length
+    }
+
+    /**
+     * Returns the number of bytes that can be read from the buffer.
+     */
+    fun bytesFetchedAvailable(): Int {
+        return maxIndex - index
+    }
+
+    /**
+     * Returns the number of bytes left in the buffer.
+     */
+    fun bytesLeft(): Int {
+        return buffer.size - index
+    }
+
+    @Throws(IOException::class)
+    fun fetchData() {
+        fetch(buffer, maxIndex, buffer.size - maxIndex).also {
+            maxIndex += it
+            bytesFetched = it
+        }
+    }
+
+    @Throws(IOException::class)
+    fun fetchDataFromStart() {
+        fetch(buffer, 0, buffer.size).also {
+            index = 0
+            maxIndex = it
+            bytesFetched = it
+        }
+    }
+
+    @Throws(IOException::class)
+    fun sendBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size - offset) {
+        send(bytes, offset, length)
+    }
+
+    /**
+     * Fetches more data if the required size is not available.
+     *
+     * @param requiredSize The required size.
+     */
+    @Throws(IOException::class)
+    fun fetchMoreDataIfNeeded(requiredSize: Int) {
+        while (bytesFetchedAvailable() < requiredSize) {
+            // Move data to the beginning of the buffer if it is not possible to fetch all
+            // the data
+            if (bytesLeft() < requiredSize) {
+                moveDataToStart()
+            }
+
+            fetchData()
         }
     }
 }

@@ -1,71 +1,71 @@
 package com.huggets.mynotes.sync.buffer
 
-import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
-import com.huggets.mynotes.sync.DataSynchronizer
-import com.huggets.mynotes.sync.DataSynchronizer.Companion.addInt
+import com.huggets.mynotes.data.Date
 import java.io.IOException
 
-abstract class SendingBuffer<out InputType>(
-    protected var buffer: ByteArray = ByteArray(1024),
-    private val countHeader: DataSynchronizer.Companion.Header,
+class SendingBuffer(
+    private val buffer: ByteArray = ByteArray(1024),
+
+    @get:Throws(IOException::class)
+    private val send: (bytes: ByteArray, offset: Int, length: Int) -> Unit,
 ) {
+    private var index: Int = 0
+    private var rememberedIndex: Int = 0
 
-    val currentElement: InputType
-        get() = localData[localDataIndex]
+    val bytesAvailable: Int
+        get() = buffer.size - index
 
-    val localElementCount
-        get() = localData.size
-
-    val remoteElementsSent
-        get() = localDataIndex
-
-    val allDataNotSent: Boolean
-        get() = elementCountNotSent || localDataIndex != localData.size
-
-    protected lateinit var localData: List<@UnsafeVariance InputType>
-        private set
-
-    protected var bufferIndex = 0
-
-    protected var localDataIndex = 0
-
-    private var elementCountNotSent = true
-
-    protected abstract fun fillBuffer()
-
-    private fun fillElementCount() {
-        if (elementCountNotSent) {
-            buffer[bufferIndex] = countHeader.value
-            bufferIndex += 1
-            buffer.addInt(localData.size, bufferIndex)
-            bufferIndex += 4
-
-            elementCountNotSent = false
-        }
+    fun addBytes(bytes: ByteArray, offset: Int, length: Int) {
+        bytes.copyInto(buffer, index, offset, offset + length)
+        index += length
     }
 
-    fun fill() {
-        fillElementCount()
-        fillBuffer()
+    fun addByte(value: Byte) {
+        buffer[index++] = value
+    }
+
+    fun addInt(value: Int) {
+        buffer[index++] = (value shr 24).toByte()
+        buffer[index++] = (value shr 16).toByte()
+        buffer[index++] = (value shr 8).toByte()
+        buffer[index++] = value.toByte()
+    }
+
+    fun addDate(date: Date) {
+        addInt(date.year)
+        addInt(date.month)
+        addInt(date.day)
+        addInt(date.hour)
+        addInt(date.minute)
+        addInt(date.second)
+        addInt(date.millisecond)
+    }
+
+    fun sendData() {
+        send(buffer, 0, index)
+        index = 0
     }
 
     /**
-     * Sends data to the other device.
-     *
-     * It sends the data that is in the buffer from the interval [0, bufferIndex).
-     *
-     * @throws IOException if an I/O error occurs
-     *
-     * @param bluetoothConnectionManager the BluetoothConnectionManager to use to send the data
-     * to the other device
+     * Length must be positive or the behaviour will be undefined.
      */
-    @Throws(IOException::class)
-    fun send(bluetoothConnectionManager: BluetoothConnectionManager) {
-        bluetoothConnectionManager.writeData(buffer, 0, bufferIndex)
-        bufferIndex = 0
+    fun saveSpace(length: Int) {
+        rememberedIndex = index
+        index += length
     }
 
-    fun setData(localData: List<@UnsafeVariance InputType>) {
-        this.localData = localData
+    fun addByteInSavedSpace(value: Byte) {
+        buffer[rememberedIndex] = value
+    }
+
+    fun addIntInSavedSpace(value: Int) {
+        buffer[rememberedIndex] = (value shr 24).toByte()
+        buffer[rememberedIndex + 1] = (value shr 16).toByte()
+        buffer[rememberedIndex + 2] = (value shr 8).toByte()
+        buffer[rememberedIndex + 3] = value.toByte()
+    }
+
+    fun spaceIsAvailable(length: Int): Boolean {
+        return index + length <= buffer.size
     }
 }
