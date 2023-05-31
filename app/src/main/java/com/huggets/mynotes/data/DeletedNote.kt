@@ -9,4 +9,6 @@ data class DeletedNote(
     @PrimaryKey
     @ColumnInfo(name = "creation_date")
     var creationDate: Date,
+    @ColumnInfo(name = "deletion_date")
+    var deletionDate: Date,
 )
