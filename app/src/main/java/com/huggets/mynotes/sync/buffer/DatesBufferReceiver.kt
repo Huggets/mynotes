@@ -3,10 +3,18 @@ package com.huggets.mynotes.sync.buffer
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.sync.Header
 
+/**
+ * Receiver for the dates of the notes.
+ *
+ * @param buffer The buffer used to receive the data.
+ */
 class DatesBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Pair<Date, Date>>(buffer) {
     override val fetchedData: List<Pair<Date, Date>>
         get() = remoteCreationDates
 
+    /**
+     * The dates that were received from the remote device.
+     */
     private val remoteCreationDates = mutableListOf<Pair<Date, Date>>()
 
     override fun readBuffer() {
@@ -27,10 +35,13 @@ class DatesBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Pair<Date, D
 
         remoteCreationDates.addAll(fetchedDates)
 
-        buffer.sendBytes(dateReceivedBuffer, 0, dateReceivedBuffer.size)
+        buffer.sendBytes(confirmationBuffer, 0, confirmationBuffer.size)
     }
 
     companion object {
-        private val dateReceivedBuffer = ByteArray(1) { Header.DATES_BUFFER_RECEIVED.value }
+        /**
+         * The buffer used to confirm the reception of the dates.
+         */
+        private val confirmationBuffer = ByteArray(1) { Header.DATES_BUFFER_RECEIVED.value }
     }
 }

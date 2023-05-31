@@ -2,36 +2,49 @@ package com.huggets.mynotes.sync.buffer
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.IOException
 
-abstract class BufferReceiver<OutputType>(
+/**
+ * Receives data from the other device and stores it in a buffer.
+ *
+ * @param buffer The buffer used to store the data.
+ * @param DataType The type of the data that will be received.
+ */
+abstract class BufferReceiver<DataType>(
     protected val buffer: ReceivingBuffer,
 ) {
-    protected abstract val fetchedData: List<OutputType>
+    /**
+     * The data that was fetched.
+     */
+    protected abstract val fetchedData: List<DataType>
 
+    /**
+     * The total number of elements that will be received.
+     */
     var remoteElementCount: Int = 0
         private set
 
+    /**
+     * Whether the total number of elements that will be received was fetched.
+     */
     private var remoteElementCountFetched: Boolean = false
 
+    /**
+     * Whether all the data was received.
+     */
     private val allDataReceived: Boolean
         get() = remoteElementCountFetched && remoteElementCount == fetchedData.size
 
-    private val mutex = Mutex(true)
+    /**
+     * A mutex used to wait until all the data is received.
+     *
+     * This blocks the [obtain] method until all the data is received.
+     */
+    private val lock = Mutex(true)
 
-    @Throws(IOException::class)
-    protected abstract fun readBuffer()
-
-    fun read() {
-        fetchElementCount()
-        readBuffer()
-
-        if (allDataReceived && mutex.isLocked) {
-            mutex.unlock()
-        }
-    }
-
-    private fun fetchElementCount() {
+    /**
+     * Reads the total number of elements that will be received if it wasn't already read.
+     */
+    private fun readElementCount() {
         if (!remoteElementCountFetched) {
             buffer.skip(1) // Skip the header
 
@@ -50,14 +63,33 @@ abstract class BufferReceiver<OutputType>(
     }
 
     /**
+     * Reads and processes the data received.
+     */
+    protected abstract fun readBuffer()
+
+    /**
+     * Reads the data received and eventually the total number of elements that will be received.
+     *
+     * If the data is fully received, it unlocks the [lock].
+     */
+    fun read() {
+        readElementCount()
+        readBuffer()
+
+        if (allDataReceived && lock.isLocked) {
+            lock.unlock()
+        }
+    }
+
+    /**
      * Obtain the data that was fetched.
      *
      * If the data is not fully received, it suspends until it is.
      *
      * @return The data that was fetched.
      */
-    suspend fun obtain(): List<OutputType> {
-        mutex.withLock {
+    suspend fun obtain(): List<DataType> {
+        lock.withLock {
             return fetchedData
         }
     }

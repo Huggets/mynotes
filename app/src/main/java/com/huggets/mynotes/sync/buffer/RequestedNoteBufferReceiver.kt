@@ -6,18 +6,58 @@ import com.huggets.mynotes.sync.Header
 import java.io.IOException
 import java.lang.Integer.min
 
+/**
+ * Receiver for the notes that this device requested.
+ *
+ * @param buffer The buffer used to receive the data.
+ */
 class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note>(buffer) {
     override val fetchedData: List<Note>
-        get() = neededNotes
+        get() = requestedNotes
 
-    private val neededNotes = mutableListOf<Note>()
+    /**
+     * The notes that this device requested.
+     */
+    private val requestedNotes = mutableListOf<Note>()
+
+    /**
+     * The buffer used to read the strings.
+     */
     private lateinit var stringBuffer: ByteArray
+
+    /**
+     * The index of the next byte to write in the [stringBuffer].
+     */
     private var stringIndex = 0
+
+    /**
+     * The length of the title of the note that is currently being read.
+     */
     private var titleLength = 0
+
+    /**
+     * The length of the content of the note that is currently being read.
+     */
     private var contentLength = 0
+
+    /**
+     * The title of the note that is currently being read.
+     */
     private lateinit var title: String
+
+    /**
+     * The content of the note that is currently being read.
+     */
     private lateinit var content: String
+
+    /**
+     * The creation date of the note that is currently being read.
+     */
     private lateinit var creationDate: Date
+
+    /**
+     * The modification date of the note that is currently being read.
+     */
     private lateinit var modificationDate: Date
 
     /**
@@ -65,7 +105,7 @@ class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note
                     stringIndex = 0
                 }
 
-                Header.REQUESTED_NOTES_TITLE_LENGTH.value -> {
+                Header.REQUESTED_NOTES_TITLE.value -> {
                     readString(buffer)
 
                     if (stringIndex == titleLength) {
@@ -75,7 +115,7 @@ class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note
                     }
                 }
 
-                Header.REQUESTED_NOTES_CONTENT_LENGTH.value -> {
+                Header.REQUESTED_NOTES_CONTENT.value -> {
                     readString(buffer)
 
                     if (stringIndex == contentLength) {
@@ -97,7 +137,8 @@ class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note
                     modificationDate = buffer.getDate()
 
                     // All information about the note is received, add it to the list
-                    neededNotes.add(
+
+                    requestedNotes.add(
                         Note(
                             title,
                             content,
@@ -114,6 +155,7 @@ class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note
 
             // If the end of the buffer is reached, fetch more data because BUFFER_END is not
             // received
+
             if (buffer.bytesFetchedAvailable() == 0) {
                 buffer.fetchDataFromStart()
             }
@@ -121,11 +163,14 @@ class RequestedNoteBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Note
             header = buffer.getByte()
         }
 
-        buffer.sendBytes(confirmationBuffer, 0, confirmationBuffer.size)
+        buffer.sendBytes(confirmationBytes, 0, confirmationBytes.size)
     }
 
     companion object {
-        private val confirmationBuffer =
+        /**
+         * The bytes used to confirm that the buffer was received.
+         */
+        private val confirmationBytes =
             ByteArray(1) { Header.REQUESTED_NOTES_BUFFER_RECEIVED.value }
     }
 }

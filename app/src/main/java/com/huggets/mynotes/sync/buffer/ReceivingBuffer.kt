@@ -1,48 +1,73 @@
 package com.huggets.mynotes.sync.buffer
 
 import com.huggets.mynotes.data.Date
-import java.io.IOException
 
-
+/**
+ * A buffer used to receive data from the other device.
+ *
+ * @property buffer The buffer used to store the data.
+ * @property fetch The function used to fetch data from the other device.
+ * @property send The function used to send data to the other device.
+ */
 class ReceivingBuffer(
     private val buffer: ByteArray,
-
-    @get:Throws(IOException::class)
     private val fetch: (bytes: ByteArray, offset: Int, length: Int) -> Int,
-
-    @get:Throws(IOException::class)
     private val send: (bytes: ByteArray, offset: Int, length: Int) -> Unit,
 ) {
+    /**
+     * The index of the next byte to be read from the buffer.
+     */
     private var index: Int = 0
+
+    /**
+     * The index of the last byte in the buffer that has been fetched.
+     *
+     * It may differ from the buffer size if the buffer is not full. Bytes read after this index
+     * are not valid and should not be read.
+     */
     private var maxIndex: Int = 0
 
+    /**
+     * The size of the buffer.
+     */
     val size: Int
         get() = buffer.size
 
+    /**
+     * The number of bytes that have been fetched during the last fetch.
+     */
     var bytesFetched: Int = 0
         private set
 
-    fun moveDataToStart() {
-        buffer.copyInto(buffer, 0, index, maxIndex)
-        maxIndex -= index
-        index = 0
-    }
-
+    /**
+     * Reads the given number of bytes from the buffer.
+     *
+     * @return A new array containing the bytes.
+     */
     fun getBytes(length: Int): ByteArray {
         return buffer.copyOfRange(index, index + length).also {
             index += length
         }
     }
 
+    /**
+     * Read a byte from the buffer.
+     */
     fun getByte(): Byte {
         return buffer[index++]
     }
 
     // TODO Maybe do not use ubyte
+    /**
+     * Read an unsigned byte from the buffer.
+     */
     fun getUByte(): UByte {
         return buffer[index++].toUByte()
     }
 
+    /**
+     * Read an int from the buffer.
+     */
     fun getInt(): Int {
         return (buffer[index++].toInt() and 0xFF shl 24) or
                 (buffer[index++].toInt() and 0xFF shl 16) or
@@ -50,6 +75,9 @@ class ReceivingBuffer(
                 (buffer[index++].toInt() and 0xFF)
     }
 
+    /**
+     * Read a date from the buffer.
+     */
     fun getDate(): Date {
         return Date(
             year = getInt(),
@@ -69,6 +97,9 @@ class ReceivingBuffer(
         return buffer[index]
     }
 
+    /**
+     * Skips the given number of bytes.
+     */
     fun skip(length: Int) {
         index += length
     }
@@ -87,7 +118,18 @@ class ReceivingBuffer(
         return buffer.size - index
     }
 
-    @Throws(IOException::class)
+    /**
+     * Moves the data not yet read to the start of the buffer.
+     */
+    fun moveDataToStart() {
+        buffer.copyInto(buffer, 0, index, maxIndex)
+        maxIndex -= index
+        index = 0
+    }
+
+    /**
+     * Fetches more data from the other device and adds it to the buffer.
+     */
     fun fetchData() {
         fetch(buffer, maxIndex, buffer.size - maxIndex).also {
             maxIndex += it
@@ -95,7 +137,11 @@ class ReceivingBuffer(
         }
     }
 
-    @Throws(IOException::class)
+    /**
+     * Fetches more data from the device and adds it at the start of the buffer.
+     *
+     * All the data that has not been read yet is lost and the index is reset to 0.
+     */
     fun fetchDataFromStart() {
         fetch(buffer, 0, buffer.size).also {
             index = 0
@@ -104,17 +150,11 @@ class ReceivingBuffer(
         }
     }
 
-    @Throws(IOException::class)
-    fun sendBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size - offset) {
-        send(bytes, offset, length)
-    }
-
     /**
      * Fetches more data if the required size is not available.
      *
      * @param requiredSize The required size.
      */
-    @Throws(IOException::class)
     fun fetchMoreDataIfNeeded(requiredSize: Int) {
         while (bytesFetchedAvailable() < requiredSize) {
             // Move data to the beginning of the buffer if it is not possible to fetch all
@@ -125,5 +165,12 @@ class ReceivingBuffer(
 
             fetchData()
         }
+    }
+
+    /**
+     * Sends the given bytes to the other device.
+     */
+    fun sendBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size - offset) {
+        send(bytes, offset, length)
     }
 }

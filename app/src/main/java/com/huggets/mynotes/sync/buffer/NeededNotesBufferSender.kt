@@ -3,6 +3,11 @@ package com.huggets.mynotes.sync.buffer
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.sync.Header
 
+/**
+ * Sender for the needed notes.
+ *
+ * @param buffer The buffer used to send the data.
+ */
 class NeededNotesBufferSender(buffer: SendingBuffer) :
     BufferSender<Date>(buffer, Header.NEEDED_NOTES_COUNT) {
 

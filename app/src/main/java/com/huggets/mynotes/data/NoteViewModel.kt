@@ -10,6 +10,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
 import com.huggets.mynotes.sync.DataSynchronizer
+import com.huggets.mynotes.sync.FetchData
+import com.huggets.mynotes.sync.SendData
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
@@ -381,8 +383,16 @@ class NoteViewModel(
             )
         )
 
+        val fetchData: FetchData = { buffer, offset, length ->
+            bluetoothConnectionManager.readData(buffer, offset, length)
+        }
+        val sendData: SendData = { buffer, offset, length ->
+            bluetoothConnectionManager.sendData(buffer, offset, length)
+        }
+
         val dataSynchronizer = DataSynchronizer(
-            bluetoothConnectionManager,
+            fetchData,
+            sendData,
             noteRepository,
             noteAssociationRepository,
             deletedNoteRepository,

@@ -9,16 +9,48 @@ import com.huggets.mynotes.sync.buffer.RequestedNoteBufferSender.State.END
 import com.huggets.mynotes.sync.buffer.RequestedNoteBufferSender.State.LAST_MODIFICATION_DATE
 import com.huggets.mynotes.sync.buffer.RequestedNoteBufferSender.State.TITLE
 
+/**
+ * Sender for the notes that were requested.
+ *
+ * @param buffer The buffer used to send the requested notes.
+ */
 class RequestedNoteBufferSender(buffer: SendingBuffer) :
     BufferSender<Note>(buffer, Header.REQUESTED_NOTES_COUNT) {
+    /**
+     * The current state of the sender.
+     */
     private var state = END
 
+    /**
+     * An array storing the bytes of a string that is being sent.
+     *
+     * It may be the title or the content of a note.
+     */
     private lateinit var bytes: ByteArray
+
+    /**
+     * The current index of the [bytes] array.
+     */
     private var bytesIndex = 0
 
+    /**
+     * The maximum number of bytes that can be written in the buffer.
+     *
+     * It is the number of bytes that are available in the buffer minus one, because the last one
+     * is reserved to indicate the end of the buffer.
+     */
     private val maxWritingSize
         get() = buffer.bytesAvailable - 1
 
+    /**
+     * Adds a date to the buffer.
+     *
+     * @param header The header of the date.
+     * @param date The date to be added.
+     *
+     * @return True if the date was not added because there was not enough space in the buffer.
+     * False otherwise.
+     */
     private fun addDate(header: Header, date: Date): Boolean {
         val headerSize = 1 + Constants.DATE_SIZE
         if (maxWritingSize < headerSize) {
@@ -31,7 +63,15 @@ class RequestedNoteBufferSender(buffer: SendingBuffer) :
         return false
     }
 
-    private fun addString(header: Header): Boolean {
+    /**
+     * Adds bytes of [bytes] to the buffer.
+     *
+     * @param header The header corresponding to the data that is being sent.
+     *
+     * @return True if the bytes were not added because there was not enough space in the buffer.
+     * False otherwise.
+     */
+    private fun addBytes(header: Header): Boolean {
         val headerSize = 5
         if (maxWritingSize < headerSize) {
             return true
@@ -70,7 +110,7 @@ class RequestedNoteBufferSender(buffer: SendingBuffer) :
                 }
 
                 TITLE -> {
-                    val shouldBreak = addString(Header.REQUESTED_NOTES_TITLE_LENGTH)
+                    val shouldBreak = addBytes(Header.REQUESTED_NOTES_TITLE)
                     if (shouldBreak) {
                         break
                     }
@@ -84,7 +124,7 @@ class RequestedNoteBufferSender(buffer: SendingBuffer) :
                 }
 
                 CONTENT -> {
-                    val shouldBreak = addString(Header.REQUESTED_NOTES_CONTENT_LENGTH)
+                    val shouldBreak = addBytes(Header.REQUESTED_NOTES_CONTENT)
                     if (shouldBreak) {
                         break
                     }
@@ -123,11 +163,33 @@ class RequestedNoteBufferSender(buffer: SendingBuffer) :
         buffer.addByte(Header.REQUESTED_NOTES_BUFFER_END.value)
     }
 
+    /**
+     * States of the [RequestedNoteBufferSender].
+     */
     private enum class State {
+        /**
+         * The sender is not sending any data.
+         */
         END,
+
+        /**
+         * The sender is sending the title of the note.
+         */
         TITLE,
+
+        /**
+         * The sender is sending the content of the note.
+         */
         CONTENT,
+
+        /**
+         * The sender is sending the creation date of the note.
+         */
         CREATION_DATE,
+
+        /**
+         * The sender is sending the last modification date of the note.
+         */
         LAST_MODIFICATION_DATE,
     }
 }

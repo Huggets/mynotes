@@ -14,9 +14,17 @@ import com.huggets.mynotes.sync.buffer.RequestedNoteBufferReceiver
 import com.huggets.mynotes.sync.buffer.RequestedNoteBufferSender
 import com.huggets.mynotes.sync.buffer.SendingBuffer
 
-typealias FetchData = (buffer: ByteArray, offset: Int, length: Int) -> Int
-typealias SendData = (buffer: ByteArray, offset: Int, length: Int) -> Unit
-
+/**
+ * The data shared between a [DataSender] and a [DataReceiver].
+ *
+ * It includes the notes, the note associations and the deleted notes.
+ *
+ * @property notes The notes of this device.
+ * @property noteAssociations The note associations of this device.
+ * @property deletedNotes The deleted notes of this device.
+ * @param fetchData The function used to fetch data from the other device.
+ * @property sendData The function used to send data to the other device.
+ */
 class SharedData(
     val notes: List<Note>,
     val noteAssociations: List<NoteAssociation>,
@@ -24,41 +32,101 @@ class SharedData(
     fetchData: FetchData,
     val sendData: SendData,
 ) {
+    /**
+     * The buffer used to receive data.
+     */
     private val receivingBuffer = ReceivingBuffer(ByteArray(8096), fetchData, sendData)
+
+    /**
+     * The buffer used to send data.
+     */
     private val sendingBuffer = SendingBuffer(ByteArray(8096), sendData)
 
+    /**
+     * The dates receiver.
+     */
     val datesReceiver = DatesBufferReceiver(receivingBuffer)
+
+    /**
+     * The needed notes receiver.
+     */
     val neededNotesReceiver = NeededNotesBufferReceiver(receivingBuffer)
+
+    /**
+     * The requested note receiver.
+     */
     val requestedNoteReceiver = RequestedNoteBufferReceiver(receivingBuffer)
+
+    /**
+     * The associations receiver.
+     */
     val associationsReceiver = AssociationsBufferReceiver(receivingBuffer)
 
+
+    /**
+     * The dates sender.
+     */
     val datesSender = DatesBufferSender(sendingBuffer)
+
+    /**
+     * The needed notes sender.
+     */
     val neededNotesSender = NeededNotesBufferSender(sendingBuffer)
+
+    /**
+     * The requested note sender.
+     */
     val requestedNoteSender = RequestedNoteBufferSender(sendingBuffer)
+
+    /**
+     * The associations sender.
+     */
     val associationsSender = AssociationsBufferSender(sendingBuffer)
+
+    /**
+     * The data end sender.
+     */
     val dataEndSender = DataEndSender(sendData)
 
+    /**
+     * The number of bytes fetched during the last fetch.
+     */
     val bytesFetched: Int
         get() = receivingBuffer.bytesFetched
 
+    /**
+     * The current byte the receiver is looking at.
+     */
     val currentByte: Byte
         get() = receivingBuffer.lookByte()
 
+    /**
+     * The number of bytes the receiver can read.
+     */
     val availableBytes: Int
         get() = receivingBuffer.bytesFetchedAvailable()
 
+    /**
+     * Stops the senders.
+     */
     fun stop() {
-        datesSender.close()
-        neededNotesSender.close()
-        requestedNoteSender.close()
-        associationsSender.close()
-        dataEndSender.close()
+        datesSender.stop()
+        neededNotesSender.stop()
+        requestedNoteSender.stop()
+        associationsSender.stop()
+        dataEndSender.stop()
     }
 
+    /**
+     * Fetches new data when no more data is available in the receiving buffer.
+     */
     fun fetchData() {
         receivingBuffer.fetchDataFromStart()
     }
 
+    /**
+     * Skips the current byte in the receiving buffer and moves to the next one.
+     */
     fun nextByte() {
         receivingBuffer.skip(1)
     }

@@ -3,11 +3,19 @@ package com.huggets.mynotes.sync.buffer
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.sync.Header
 
+/**
+ * Receiver for the needed notes.
+ *
+ * @param buffer The buffer used to receive the data.
+ */
 class NeededNotesBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Date>(buffer) {
 
     override val fetchedData: List<Date>
         get() = neededNoteDates
 
+    /**
+     * The dates of the notes that are needed.
+     */
     private val neededNoteDates = mutableListOf<Date>()
 
     override fun readBuffer() {
@@ -25,10 +33,13 @@ class NeededNotesBufferReceiver(buffer: ReceivingBuffer) : BufferReceiver<Date>(
 
         neededNoteDates.addAll(fetchedDates)
 
-        buffer.sendBytes(confirmationBuffer, 0, confirmationBuffer.size)
+        buffer.sendBytes(confirmationBytes, 0, confirmationBytes.size)
     }
 
     companion object {
-        private val confirmationBuffer = ByteArray(1) { Header.NEEDED_NOTES_BUFFER_RECEIVED.value }
+        /**
+         * The buffer used to confirm the reception of the needed notes.
+         */
+        private val confirmationBytes = ByteArray(1) { Header.NEEDED_NOTES_BUFFER_RECEIVED.value }
     }
 }
