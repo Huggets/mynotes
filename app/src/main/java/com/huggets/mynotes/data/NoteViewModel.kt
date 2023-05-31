@@ -141,16 +141,14 @@ class NoteViewModel(
      */
     fun deleteNote(creationDate: Date) {
         viewModelScope.launch {
-            val deletionDate = Date.getCurrentTime()
-
             noteRepository.getChildren(creationDate).forEach { child ->
                 noteRepository.delete(child.creationDate)
-                deletedNoteRepository.insert(DeletedNote(child.creationDate, deletionDate))
+                deletedNoteRepository.insert(DeletedNote(child.creationDate))
                 noteAssociationRepository.deleteByChildCreationDate(child.creationDate)
             }
 
             noteRepository.delete(creationDate)
-            deletedNoteRepository.insert(DeletedNote(creationDate, deletionDate))
+            deletedNoteRepository.insert(DeletedNote(creationDate))
         }
     }
 
@@ -161,7 +159,7 @@ class NoteViewModel(
             serializer.startDocument("UTF-8", true)
 
             serializer.startTag("", "data")
-            serializer.attribute("", "version", "3")
+            serializer.attribute("", "version", "2")
             notesToXml(serializer)
             noteAssociationsToXml(serializer)
             deletedNotesToXml(serializer)
@@ -213,8 +211,11 @@ class NoteViewModel(
 
         deletedNoteRepository.getAllDeletedNotes().forEach { deletedNote ->
             serializer.startTag("", "deletedNote")
-            serializer.attribute("", "creationDate", deletedNote.creationDate.toString())
-            serializer.attribute("", "deletionDate", deletedNote.deletionDate.toString())
+            serializer.attribute(
+                "",
+                "creationDate",
+                deletedNote.creationDate.toString()
+            )
             serializer.endTag("", "deletedNote")
         }
 
@@ -239,7 +240,7 @@ class NoteViewModel(
                     when (parser.name) {
                         "data" -> {
                             val version: Int? = parser.getAttributeValue("", "version")?.toInt()
-                            if (version != 3) {
+                            if (version != 2) {
                                 stream.close()
                                 _uiState.value = _uiState.value.copy(
                                     isImporting = false,
@@ -280,11 +281,8 @@ class NoteViewModel(
                             val creationDate = Date.fromString(
                                 parser.getAttributeValue("", "creationDate")
                             )
-                            val deletionDate = Date.fromString(
-                                parser.getAttributeValue("", "deletionDate")
-                            )
 
-                            importedDeletedNotes.add(DeletedNote(creationDate, deletionDate))
+                            importedDeletedNotes.add(DeletedNote(creationDate))
                         }
                     }
                 }

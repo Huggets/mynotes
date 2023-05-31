@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import com.huggets.mynotes.data.*
 
 @Database(
-    version = 4,
+    version = 3,
     entities = [Note::class, NoteAssociation::class, DeletedNote::class],
     exportSchema = true,
 )
@@ -28,11 +28,7 @@ abstract class ApplicationDatabase : RoomDatabase() {
                     context,
                     ApplicationDatabase::class.java,
                     "database"
-                ).addMigrations(
-                    MIGRATION_1_2,
-                    MIGRATION_2_3,
-                    MIGRATION_3_4,
-                ).build()
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
             }
 
             return db as ApplicationDatabase
