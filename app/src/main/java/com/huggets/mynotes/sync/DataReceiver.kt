@@ -8,8 +8,12 @@ class DataReceiver(
     private val sharedData: SharedData,
 ) {
     private var hasOtherDeviceSentEverything = false
-    private var hasReceivedAllRequestedNotes = false
+
     private var hasOtherDeviceReceivedDataEnd = false
+
+    private val hasReceivedAllRequestedNotes
+        get() = sharedData.requestedNoteReceiver.remoteElementCount == sharedData.neededNotesSender.localElementCount
+
 
     fun start(coroutineScope: CoroutineScope, onFinish: (Exception?) -> Unit) {
         coroutineScope.launch {
@@ -55,15 +59,20 @@ class DataReceiver(
                     Header.REQUESTED_NOTES_LAST_MODIFICATION_DATE.value,
                     Header.REQUESTED_NOTES_BUFFER_END.value -> {
                         sharedData.requestedNoteReceiver.read()
-
-                        if (sharedData.requestedNoteReceiver.remoteElementCount == sharedData.neededNotesSender.localElementCount) {
-                            hasReceivedAllRequestedNotes = true
-                        }
                     }
 
                     Header.REQUESTED_NOTES_BUFFER_RECEIVED.value -> {
                         sharedData.nextByte()
                         sharedData.requestedNoteSender.confirmDataReceived()
+                    }
+
+                    Header.ASSOCIATIONS.value, Header.ASSOCIATIONS_COUNT.value -> {
+                        sharedData.associationsReceiver.read()
+                    }
+
+                    Header.ASSOCIATIONS_BUFFER_RECEIVED.value -> {
+                        sharedData.nextByte()
+                        sharedData.associationsSender.confirmDataReceived()
                     }
 
                     Header.DATA_END.value -> {
@@ -82,7 +91,11 @@ class DataReceiver(
                 }
 
                 if (sharedData.availableBytes == 0) {
-                    if (hasOtherDeviceSentEverything && hasReceivedAllRequestedNotes && hasOtherDeviceReceivedDataEnd) {
+                    if (
+                        hasOtherDeviceSentEverything &&
+                        hasReceivedAllRequestedNotes &&
+                        hasOtherDeviceReceivedDataEnd
+                    ) {
                         return null
                     }
                     sharedData.fetchData()

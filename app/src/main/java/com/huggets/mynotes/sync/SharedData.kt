@@ -3,6 +3,8 @@ package com.huggets.mynotes.sync
 import com.huggets.mynotes.data.DeletedNote
 import com.huggets.mynotes.data.Note
 import com.huggets.mynotes.data.NoteAssociation
+import com.huggets.mynotes.sync.buffer.AssociationsBufferReceiver
+import com.huggets.mynotes.sync.buffer.AssociationsBufferSender
 import com.huggets.mynotes.sync.buffer.DatesBufferReceiver
 import com.huggets.mynotes.sync.buffer.DatesBufferSender
 import com.huggets.mynotes.sync.buffer.NeededNotesBufferReceiver
@@ -28,10 +30,12 @@ class SharedData(
     val datesReceiver = DatesBufferReceiver(receivingBuffer)
     val neededNotesReceiver = NeededNotesBufferReceiver(receivingBuffer)
     val requestedNoteReceiver = RequestedNoteBufferReceiver(receivingBuffer)
+    val associationsReceiver = AssociationsBufferReceiver(receivingBuffer)
 
     val datesSender = DatesBufferSender(sendingBuffer)
     val neededNotesSender = NeededNotesBufferSender(sendingBuffer)
     val requestedNoteSender = RequestedNoteBufferSender(sendingBuffer)
+    val associationsSender = AssociationsBufferSender(sendingBuffer)
     val dataEndSender = DataEndSender(sendData)
 
     val bytesFetched: Int
@@ -47,6 +51,7 @@ class SharedData(
         datesSender.close()
         neededNotesSender.close()
         requestedNoteSender.close()
+        associationsSender.close()
         dataEndSender.close()
     }
 

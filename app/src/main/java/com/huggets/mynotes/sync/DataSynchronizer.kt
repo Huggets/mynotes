@@ -84,5 +84,8 @@ class DataSynchronizer(
         sharedData.requestedNoteReceiver.obtain().forEach {
             noteRepository.insert(it)
         }
+        sharedData.associationsReceiver.obtain().forEach {
+            noteAssociationRepository.insert(it)
+        }
     }
 }

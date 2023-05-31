@@ -3,6 +3,7 @@ package com.huggets.mynotes.sync
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.Note
 import com.huggets.mynotes.data.Note.Companion.find
+import com.huggets.mynotes.data.NoteAssociation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
@@ -17,6 +18,7 @@ class DataSender(
                 ::sendDates,
                 ::requestNeededNoteDates,
                 ::sendRequestedNotes,
+                ::sendRequestedAssociations,
                 ::sendEndOfData,
             )
 
@@ -94,6 +96,18 @@ class DataSender(
         sharedData.requestedNoteSender.setData(requestedNotes)
 
         return send(sharedData.requestedNoteSender)
+    }
+
+    private fun getRequestedAssociations(): List<NoteAssociation> {
+        return sharedData.noteAssociations
+    }
+
+    private suspend fun sendRequestedAssociations(): Exception? {
+        val requestedNoteAssociations = getRequestedAssociations()
+
+        sharedData.associationsSender.setData(requestedNoteAssociations)
+
+        return send(sharedData.associationsSender)
     }
 
     private suspend fun sendEndOfData(): Exception? {
