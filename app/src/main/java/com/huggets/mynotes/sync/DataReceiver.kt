@@ -14,6 +14,9 @@ class DataReceiver(
     private val hasReceivedAllRequestedNotes
         get() = sharedData.requestedNoteReceiver.remoteElementCount == sharedData.neededNotesSender.localElementCount
 
+    private val hasReceivedAllAssociations
+        get() = true
+
 
     fun start(coroutineScope: CoroutineScope, onFinish: (Exception?) -> Unit) {
         coroutineScope.launch {

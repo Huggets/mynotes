@@ -18,7 +18,7 @@ class DataSender(
                 ::sendDates,
                 ::requestNeededNoteDates,
                 ::sendRequestedNotes,
-                ::sendRequestedAssociations,
+                ::sendAssociations,
                 ::sendEndOfData,
             )
 
@@ -98,11 +98,20 @@ class DataSender(
         return send(sharedData.requestedNoteSender)
     }
 
-    private fun getRequestedAssociations(): List<NoteAssociation> {
-        return sharedData.noteAssociations
+    private suspend fun getRequestedAssociations(): List<NoteAssociation> {
+        val associations = mutableListOf<NoteAssociation>()
+
+        sharedData.neededNotesReceiver.obtain().forEach { date ->
+            sharedData.noteAssociations.find { association ->
+                date == association.childCreationDate
+            }?.also {
+                associations.add(it)
+            }
+        }
+        return associations
     }
 
-    private suspend fun sendRequestedAssociations(): Exception? {
+    private suspend fun sendAssociations(): Exception? {
         val requestedNoteAssociations = getRequestedAssociations()
 
         sharedData.associationsSender.setData(requestedNoteAssociations)
