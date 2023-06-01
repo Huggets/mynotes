@@ -21,6 +21,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,22 +41,47 @@ fun DataSyncingActivity(
     navigateUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cancelSyncAndNavigateUp = {
-        cancelSync()
-        navigateUp()
+    val showCancelDialog = rememberSaveable { mutableStateOf(false) }
+    var navigateUpWhenCancelling by rememberSaveable { mutableStateOf(false) }
+
+    val onCancelDialogDismiss = {
+        navigateUpWhenCancelling = false
     }
+    val cancel = {
+        cancelSync()
+
+        if (navigateUpWhenCancelling) {
+            navigateUp()
+        }
+    }
+    val cancelAndNavigateUp = {
+        if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
+            navigateUpWhenCancelling = true
+            showCancelDialog.value = true
+        } else {
+            navigateUp()
+        }
+    }
+
     val onBackPress = {
         if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
-            cancelSync()
+            showCancelDialog.value = true
         } else {
-            cancelSyncAndNavigateUp()
+            navigateUp()
         }
     }
     BackPressHandler(onBackPress)
 
+    ConfirmationDialog(
+        displayDialog = showCancelDialog,
+        onConfirmation = cancel,
+        message = "Are you sure you want to cancel synchronization?",
+        onDismiss = onCancelDialogDismiss,
+    )
+
     Scaffold(
         modifier = modifier,
-        topBar = { AppBar(cancelSyncAndNavigateUp) },
+        topBar = { AppBar(cancelAndNavigateUp) },
     ) {
         Box(
             Modifier
@@ -132,14 +161,14 @@ private fun SyncingIndicator(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar(
-    navigateUp: () -> Unit,
+    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
         modifier = modifier,
         title = { Text("Data syncing") },
         navigationIcon = {
-            IconButton(onClick = { navigateUp() }) {
+            IconButton(onClick = { onCancel() }) {
                 Icon(Icons.Filled.Close, contentDescription = "Stop syncing")
             }
         },

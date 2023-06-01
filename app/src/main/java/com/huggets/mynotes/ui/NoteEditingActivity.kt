@@ -117,7 +117,7 @@ fun NoteEditingActivity(
                 isDeleted = true
                 navigationController.popBackStack()
             },
-            confirmationMessage = "Are you sure you want to delete this note?"
+            message = "Are you sure you want to delete this note?"
         )
         ConfirmationDialog(
             displayDialog = showCancelConfirmation,
@@ -129,7 +129,7 @@ fun NoteEditingActivity(
                 }
                 navigationController.popBackStack()
             },
-            confirmationMessage = "Cancel changes?",
+            message = "Cancel changes?",
         )
 
         Scaffold(

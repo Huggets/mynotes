@@ -16,10 +16,14 @@ import androidx.compose.ui.Modifier
 fun ConfirmationDialog(
     displayDialog: MutableState<Boolean>,
     onConfirmation: () -> Unit,
-    confirmationMessage: String,
+    message: String,
     modifier: Modifier = Modifier,
+    onDismiss: () -> Unit = {},
 ) {
-    val dismiss: () -> Unit = { displayDialog.value = false }
+    val dismiss: () -> Unit = {
+        displayDialog.value = false
+        onDismiss()
+    }
     val confirm: () -> Unit = {
         displayDialog.value = false
         onConfirmation()
@@ -30,7 +34,7 @@ fun ConfirmationDialog(
             onDismissRequest = dismiss,
             confirmButton = { Button(onClick = confirm) { Text("Yes") } },
             dismissButton = { Button(onClick = dismiss) { Text("Cancel") } },
-            text = { Text(confirmationMessage) },
+            text = { Text(message) },
             modifier = modifier
         )
     }

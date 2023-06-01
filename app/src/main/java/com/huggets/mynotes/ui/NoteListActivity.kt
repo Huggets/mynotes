@@ -158,7 +158,7 @@ fun NoteListActivity(
                     }
 
                     deleteNotes(toDelete)
-                }, confirmationMessage = "Are you sure you want to delete the selected note(s)?"
+                }, message = "Are you sure you want to delete the selected note(s)?"
             )
         }
     }
