@@ -2,6 +2,17 @@ package com.huggets.mynotes.data
 
 import java.util.Calendar
 
+/**
+ * Represents a date with year, month, day, hour, minute, second and millisecond.
+ *
+ * @property year The year of the date.
+ * @property month The month of the date.
+ * @property day The day of the date.
+ * @property hour The hour of the date.
+ * @property minute The minute of the date.
+ * @property second The second of the date.
+ * @property millisecond The millisecond of the date.
+ */
 data class Date(
     val year: Int,
     val month: Int,
@@ -11,16 +22,26 @@ data class Date(
     val second: Int,
     val millisecond: Int,
 ) : Comparable<Date> {
+
+    /**
+     * Returns a string representation of the number with at least two digits.
+     */
     private fun toTwoDigitString(number: Int): String {
         return if (number < 10) "0$number" else number.toString()
     }
 
+    /**
+     * Returns a string representation of the number with at least three digits.
+     */
     private fun toThreeDigitString(number: Int): String {
         return if (number < 10) "00$number"
         else if (number < 100) "0$number"
         else number.toString()
     }
 
+    /**
+     * Returns a string representation of the number with at least four digits.
+     */
     private fun toFourDigitString(number: Int): String {
         return if (number < 10) "000$number"
         else if (number < 100) "00$number"
@@ -53,6 +74,10 @@ data class Date(
     }
 
     companion object {
+
+        /**
+         * Returns the current time as a [Date] object.
+         */
         fun getCurrentTime(): Date {
             val calendar = Calendar.getInstance()
 
@@ -67,6 +92,9 @@ data class Date(
             )
         }
 
+        /**
+         * Returns a [Date] object from a string representation.
+         */
         fun fromString(string: String): Date {
             val year = string.substring(0, 4).toInt()
             val month = string.substring(5, 7).toInt()

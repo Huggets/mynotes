@@ -7,6 +7,14 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.huggets.mynotes.data.*
 
+/**
+ * Database for the application that holds the notes.
+ *
+ * The database contains 3 tables:
+ * - note: contains the notes,
+ * - note_association: contains the associations between notes,
+ * - deleted_note: contains the notes that were deleted.
+ */
 @Database(
     version = 3,
     entities = [Note::class, NoteAssociation::class, DeletedNote::class],
@@ -15,13 +23,30 @@ import com.huggets.mynotes.data.*
 @TypeConverters(Converter::class)
 abstract class ApplicationDatabase : RoomDatabase() {
 
+    /**
+     * Returns the DAO for the notes.
+     */
     abstract fun noteDao(): NoteDao
+
+    /**
+     * Returns the DAO for the note associations.
+     */
     abstract fun noteAssociationDao(): NoteAssociationDao
+
+    /**
+     * Returns the DAO for the deleted notes.
+     */
     abstract fun deletedNoteDao(): DeletedNoteDao
 
     companion object {
+        /**
+         * The database instance.
+         */
         private var db: ApplicationDatabase? = null
 
+        /**
+         * Returns the database instance.
+         */
         fun getDb(context: Context): ApplicationDatabase {
             if (db == null) {
                 db = Room.databaseBuilder(

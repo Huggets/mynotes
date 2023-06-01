@@ -3,6 +3,10 @@ package com.huggets.mynotes.data
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+/**
+ * Migration from schema 1 to 2 which adds an id column to the note table and used it as primary
+ * key.
+ */
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(database: SupportSQLiteDatabase) {
         // Create new note table and add id column
@@ -110,6 +114,11 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/**
+ * Migration from schema 2 to 3 which adds a FTS virtual table for the note table (and removes the
+ * id column).
+ * Also removes the preference table.
+ */
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(database: SupportSQLiteDatabase) {
         // Create new note_association table
