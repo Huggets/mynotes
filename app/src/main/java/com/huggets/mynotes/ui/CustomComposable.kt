@@ -1,11 +1,16 @@
 package com.huggets.mynotes.ui
 
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 
 /**
  * When displayDialog is true, show a Dialog that ask for a confirmation.
@@ -37,5 +42,36 @@ fun ConfirmationDialog(
             text = { Text(message) },
             modifier = modifier
         )
+    }
+}
+
+/**
+ * Changes the behavior of the back button.
+ *
+ * @param onBackPress The callback to run when back is pressed.
+ */
+@Composable
+fun BackPressHandler(
+    onBackPress: () -> Unit,
+) {
+    val onBackPressed = remember {
+        object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = onBackPress()
+        }
+    }
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Add a callback called when back is pressed
+    // Remove it when leaving the composition
+    DisposableEffect(lifecycleOwner, backDispatcher) {
+        backDispatcher?.onBackPressedDispatcher?.addCallback(
+            lifecycleOwner,
+            onBackPressed
+        )
+
+        onDispose {
+            onBackPressed.remove()
+        }
     }
 }
