@@ -2,11 +2,13 @@ package com.huggets.mynotes.data
 
 import android.app.Application
 import android.content.Context
+import android.content.res.Resources
 import android.util.Xml
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.huggets.mynotes.R
 import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
 import com.huggets.mynotes.sync.DataSynchronizer
 import com.huggets.mynotes.sync.FetchData
@@ -26,6 +28,7 @@ import java.io.OutputStream
 class NoteViewModel(
     context: Context,
     private val bluetoothConnectionManager: BluetoothConnectionManager,
+    private val resources: Resources,
 ) : ViewModel() {
 
     private val noteRepository = NoteRepository(context)
@@ -250,7 +253,7 @@ class NoteViewModel(
                                 _uiState.value = _uiState.value.copy(
                                     isImporting = false,
                                     importFailed = true,
-                                    importFailedMessage = "Unsupported version"
+                                    importFailedMessage = resources.getString(R.string.unsupported_version)
                                 )
                                 return@launch
                             }
@@ -413,7 +416,7 @@ class NoteViewModel(
             bluetoothConnectionManager.stopConnection()
 
             val error = it != null
-            val errorMessage = it?.message ?: "No message"
+            val errorMessage = it?.message ?: resources.getString(R.string.no_message)
 
             _uiState.value = _uiState.value.copy(
                 dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
@@ -431,7 +434,8 @@ class NoteViewModel(
                 connecting = false,
                 connected = false,
                 synchronisationError = true,
-                synchronisationErrorMessage = exception.message ?: "Unknown error"
+                synchronisationErrorMessage = exception.message
+                    ?: resources.getString(R.string.no_message)
             )
         )
     }
@@ -440,6 +444,7 @@ class NoteViewModel(
         val APPLICATION_KEY_EXTRAS = object : CreationExtras.Key<Application> {}
         val BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS =
             object : CreationExtras.Key<BluetoothConnectionManager> {}
+        val RESOURCES_KEY_EXTRAS = object : CreationExtras.Key<Resources> {}
 
         @Suppress("UNCHECKED_CAST")
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
@@ -447,8 +452,9 @@ class NoteViewModel(
                 val application = checkNotNull(extras[APPLICATION_KEY_EXTRAS])
                 val bluetoothConnectionManager =
                     checkNotNull(extras[BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS])
+                val resources = checkNotNull(extras[RESOURCES_KEY_EXTRAS])
 
-                return NoteViewModel(application, bluetoothConnectionManager) as? T
+                return NoteViewModel(application, bluetoothConnectionManager, resources) as? T
                     ?: throw IllegalArgumentException("Unknown ViewModel class")
             }
         }

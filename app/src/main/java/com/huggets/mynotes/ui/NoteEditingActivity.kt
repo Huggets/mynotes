@@ -20,10 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.huggets.mynotes.R
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
@@ -96,7 +98,7 @@ fun NoteEditingActivity(
                 isDeleted = true
                 navigateUp()
             },
-            message = "Are you sure you want to delete this note?"
+            message = stringResource(R.string.confirmation_message_delete_note)
         )
         ConfirmationDialog(
             displayDialog = showCancelConfirmation,
@@ -108,7 +110,7 @@ fun NoteEditingActivity(
                 }
                 navigateUp()
             },
-            message = "Cancel changes?",
+            message = stringResource(R.string.confirmation_message_cancel_changes)
         )
 
         Scaffold(
@@ -262,7 +264,7 @@ private fun Tab(
                 editingVisibilityState.targetState = true
                 associationVisibilityState.targetState = false
             },
-            text = { Text("Edit") },
+            text = { Text(stringResource(R.string.tab_edit)) },
         )
         Tab(
             selected = index.value == 1,
@@ -271,7 +273,7 @@ private fun Tab(
                 editingVisibilityState.targetState = false
                 associationVisibilityState.targetState = true
             },
-            text = { Text("View associated notes") },
+            text = { Text(stringResource(R.string.tab_associated_notes)) },
         )
     }
 }
@@ -300,7 +302,7 @@ private fun AssociatedNotes(
                 shape = ShapeDefaults.Small,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Associate a new note")
+                Text(stringResource(R.string.associate_new_note))
             }
         }
         for (associatedNote in associatedNotes) {
@@ -338,7 +340,7 @@ private fun AssociatedNoteElement(
     ) {
         Row(modifier = Modifier.clickable { onClick() }) {
             Text(
-                text = text.ifBlank { "No title" },
+                text = text.ifBlank { stringResource(R.string.no_title) },
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 maxLines = 2,
@@ -377,22 +379,22 @@ private fun AppBar(
                 singleLine = true,
                 colors = colors,
                 placeholder = {
-                    Text("No title", fontSize = 24.sp)
+                    Text(stringResource(R.string.no_title), fontSize = 24.sp)
                 },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
         },
         actions = {
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, "Delete note")
+                Icon(Icons.Filled.Delete, stringResource(R.string.delete_note))
             }
             IconButton(onClick = onSave) {
-                Icon(Icons.Filled.Done, "Save note")
+                Icon(Icons.Filled.Done, stringResource(R.string.save_note))
             }
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, "Cancel note")
+                Icon(Icons.Filled.ArrowBack, stringResource(R.string.cancel_changes))
             }
         },
         modifier = modifier,

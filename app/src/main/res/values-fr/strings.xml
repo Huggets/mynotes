@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mes Notes</string>
+    <string name="note_list_activity_name">Voir les notes</string>
+    <string name="confirmation_message_delete_selected_notes">Êtes-vous sûr(e) de vouloir supprimer les notes sélectionnées ?</string>
+    <string name="no_notes">Aucunes notes</string>
+    <string name="no_title">Aucun titre</string>
+    <string name="delete_selected_notes">Supprimer les notes sélectionnées</string>
+    <string name="more_options">Plus d’options</string>
+    <string name="export_data">Exporter les données</string>
+    <string name="import_data">Importer des données</string>
+    <string name="synchronize_data">Synchroniser les données</string>
+    <string name="add_new_note">Ajouter une nouvelle note</string>
+    <string name="confirmation_message_delete_note">Êtes-vous sûr(e) de vouloir supprimer cette note ?</string>
+    <string name="confirmation_message_cancel_changes">Annuler les changements ?</string>
+    <string name="tab_edit">Éditer</string>
+    <string name="tab_associated_notes">Notes associées</string>
+    <string name="associate_new_note">Associer une nouvelle note</string>
+    <string name="delete_note">Supprimer la note</string>
+    <string name="save_note">Sauvegarder la note</string>
+    <string name="cancel_changes">Annuler les changements</string>
+    <string name="confirmation_message_cancel_synchronization">Êtes-vous sûr(e) de vouloir annuler la synchronisation ?</string>
+    <string name="bluetooth_not_supported">Le Bluetooth n’est pas disponible sur cet appareil.</string>
+    <string name="error_bluetooth_permission_not_granted">La synchronisation des notes nécessite de se connecter à un appareil en bluetooth, mais il semblerait que l’applicaton n’aie pas la permission de le faire. Veuillez accorder cette permission si vous souhaitez utiliser cette fonctionnalité.</string>
+    <string name="error_bluetooth_disabled">Veuillez activer le bluetooth pour pouvoir synchroniser vos notes avec un autre appareil.</string>
+    <string name="synchronizing_notes">Connecté ! Synchronisation de vos notes en cours…</string>
+    <string name="synchronization_error">Erreur de synchronisation</string>
+    <string name="data_syncing_activity_name">Synchroniser les notes</string>
+    <string name="stop_synchronization">Arrêter la synchronisation</string>
+    <string name="paired_devices_information">Si vous ne voyez pas l’appareil dans la liste qui suit, cela signifie très certainement que vous ne l’avez pas appairé. Vous devez dans ce cas le faire en allant dans les paramètres Bluetooth.</string>
+    <string name="no_paired_devices">Aucun appareil appairé</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+    <string name="cancel">Annuler</string>
+    <string name="error_export_xml_writing_file">Erreur lors de l’écriture du fichier !</string>
+    <string name="error_import_xml_reading_file">Erreur lors de la lecture du fichier !</string>
+    <string name="no_message">Pas de message</string>
+    <string name="unsupported_version">Version non supportée</string>
+</resources>

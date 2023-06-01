@@ -18,10 +18,12 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huggets.mynotes.*
+import com.huggets.mynotes.R
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
@@ -164,7 +166,7 @@ fun NoteListActivity(
                     }
 
                     deleteNotes(toDelete)
-                }, message = "Are you sure you want to delete the selected note(s)?"
+                }, message = stringResource(R.string.confirmation_message_delete_selected_notes)
             )
         }
     }
@@ -224,7 +226,9 @@ private fun NoteElementList(
                 .padding(Values.smallPadding)
         ) {
             Text(
-                text = "No notes", fontSize = 20.sp, modifier = Modifier.align(Alignment.Center)
+                text = stringResource(R.string.no_notes),
+                fontSize = 20.sp,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
 
@@ -305,7 +309,7 @@ private fun NoteElement(
                 modifier = Modifier.padding(Values.smallPadding),
             ) {
                 Text(
-                    text = note.title.ifBlank { "No title" },
+                    text = note.title.ifBlank { stringResource(R.string.no_title) },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
@@ -345,7 +349,7 @@ private fun AppBar(
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
-        title = { Text("View notes") },
+        title = { Text(stringResource(R.string.note_list_activity_name)) },
         actions = {
             AnimatedVisibility(
                 visibleState = deleteIconState,
@@ -353,34 +357,34 @@ private fun AppBar(
                 exit = fadeOut(emphasizedFloat),
             ) {
                 IconButton(onClick = deleteSelectedNote) {
-                    Icon(Icons.Filled.Delete, "Delete selected notes")
+                    Icon(Icons.Filled.Delete, stringResource(R.string.delete_selected_notes))
                 }
             }
             Row {
                 var isExpanded by rememberSaveable { mutableStateOf(false) }
 
                 IconButton(onClick = { isExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, "More options")
+                    Icon(Icons.Filled.MoreVert, stringResource(R.string.more_options))
 
                 }
 
                 DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("Export to XML") },
+                        text = { Text(stringResource(R.string.export_data)) },
                         onClick = {
                             exportToXml()
                             isExpanded = false
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text("Import from XML") },
+                        text = { Text(stringResource(R.string.import_data)) },
                         onClick = {
                             importFromXml()
                             isExpanded = false
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text("Sync data with another device") },
+                        text = { Text(stringResource(R.string.synchronize_data)) },
                         onClick = {
                             startSyncDataWithAnotherDevice()
                             isExpanded = false
@@ -406,7 +410,7 @@ private fun Fab(
             navigateToNote(newNoteCreationDate, true)
         }
     }
-    val label = "Add a new note"
+    val label = stringResource(R.string.add_new_note)
     val icon: @Composable () -> Unit = { Icon(Icons.Filled.Add, label) }
 
     AnimatedVisibility(

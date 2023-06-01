@@ -11,6 +11,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
+import com.huggets.mynotes.R
 
 /**
  * When displayDialog is true, show a Dialog that ask for a confirmation.
@@ -37,8 +39,8 @@ fun ConfirmationDialog(
     if (displayDialog.value) {
         AlertDialog(
             onDismissRequest = dismiss,
-            confirmButton = { Button(onClick = confirm) { Text("Yes") } },
-            dismissButton = { Button(onClick = dismiss) { Text("Cancel") } },
+            confirmButton = { Button(onClick = confirm) { Text(stringResource(R.string.yes)) } },
+            dismissButton = { Button(onClick = dismiss) { Text(stringResource(R.string.no)) } },
             text = { Text(message) },
             modifier = modifier
         )

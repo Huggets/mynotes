@@ -138,6 +138,7 @@ class MainActivity : ComponentActivity() {
                 extras[NoteViewModel.APPLICATION_KEY_EXTRAS] = application
                 extras[NoteViewModel.BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS] =
                     bluetoothConnectionManager!!
+                extras[NoteViewModel.RESOURCES_KEY_EXTRAS] = resources
             }
         }) { NoteViewModel.Factory }
 
@@ -158,7 +159,8 @@ class MainActivity : ComponentActivity() {
                                 // Show an error message in the log and in a snackbar
                                 Log.e("MainActivity", e.stackTraceToString())
 
-                                snackbarMessage?.value = "Error when writing to file!"
+                                snackbarMessage?.value =
+                                    resources.getString(R.string.error_export_xml_writing_file)
                                 showSnackbar?.value = true
                             }
                         }
@@ -179,7 +181,8 @@ class MainActivity : ComponentActivity() {
                                 // Show an error message in the log and in a snackbar
                                 Log.e("MainActivity", e.stackTraceToString())
 
-                                snackbarMessage?.value = "Error when reading file!"
+                                snackbarMessage?.value =
+                                    resources.getString(R.string.error_import_xml_reading_file)
                                 showSnackbar?.value = true
                             }
                         }

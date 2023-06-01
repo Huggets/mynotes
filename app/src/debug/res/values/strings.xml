@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">My Notes - Debug Version</string>
+    <string name="app_name" translatable="false">My Notes - Debug Version</string>
+    <string name="note_list_activity_name" translatable="false">View notes - Debug Version</string>
 </resources>
