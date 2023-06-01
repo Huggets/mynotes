@@ -1,7 +1,5 @@
 package com.huggets.mynotes.ui
 
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDp
@@ -26,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
@@ -36,12 +33,13 @@ import com.huggets.mynotes.ui.state.find
 
 @Composable
 fun NoteEditingActivity(
-    navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     noteCreationDate: Date,
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
     saveNote: (NoteItemUiState) -> Unit,
     deleteNote: (noteCreationDate: Date) -> Unit,
+    navigateUp: () -> Unit,
+    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit,
     isNew: Boolean,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
@@ -58,30 +56,11 @@ fun NoteEditingActivity(
                 deleteNote(noteCreationDate)
                 isDeleted = true
             }
-            navigationController.popBackStack()
+            navigateUp()
         }
     }
 
-    val onBackPressed = remember {
-        object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() = cancelNoteChanges()
-        }
-    }
-    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Add a callback called when back is pressed
-    // Remove it when leaving the composition
-    DisposableEffect(lifecycleOwner, backDispatcher) {
-        backDispatcher?.onBackPressedDispatcher?.addCallback(
-            lifecycleOwner,
-            onBackPressed
-        )
-
-        onDispose {
-            onBackPressed.remove()
-        }
-    }
+    BackPressHandler(cancelNoteChanges)
 
     val note = appState.value.allNotes.find(noteCreationDate)
 
@@ -104,7 +83,7 @@ fun NoteEditingActivity(
         }
         val saveAndPopBackStack: () -> Unit = {
             saveChanges()
-            navigationController.popBackStack()
+            navigateUp()
         }
         val showDeleteConfirmationDialog: () -> Unit = {
             showDeleteConfirmation.value = true
@@ -115,7 +94,7 @@ fun NoteEditingActivity(
             onConfirmation = {
                 deleteNote(noteCreationDate)
                 isDeleted = true
-                navigationController.popBackStack()
+                navigateUp()
             },
             message = "Are you sure you want to delete this note?"
         )
@@ -127,7 +106,7 @@ fun NoteEditingActivity(
                     deleteNote(noteCreationDate)
                     isDeleted = true
                 }
-                navigationController.popBackStack()
+                navigateUp()
             },
             message = "Cancel changes?",
         )
@@ -216,8 +195,8 @@ fun NoteEditingActivity(
                             parentCreationDate = noteCreationDate,
                             associatedNotes = associatedNotes,
                             notes = appState.value.allNotes,
-                            navigationController = navigationController,
                             createNote = createNote,
+                            navigateToNote = navigateToNote,
                             modifier = Modifier.padding(Value.smallPadding),
                         )
                     }
@@ -302,8 +281,8 @@ private fun AssociatedNotes(
     parentCreationDate: Date,
     associatedNotes: List<NoteAssociationItemUiState>,
     notes: List<NoteItemUiState>,
-    navigationController: NavHostController,
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
+    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -315,8 +294,7 @@ private fun AssociatedNotes(
                 onClick = {
                     // Create and edit the new note
                     createNote(parentCreationDate) { newNoteCreationDate ->
-                        val destination = Destinations.generateEditNote(newNoteCreationDate, true)
-                        navigationController.navigate(destination)
+                        navigateToNote(newNoteCreationDate, true)
                     }
                 },
                 shape = ShapeDefaults.Small,
@@ -331,13 +309,7 @@ private fun AssociatedNotes(
                     AssociatedNoteElement(
                         text = note.title,
                         onClick = {
-                            // Open the associated note
-                            navigationController.navigate(
-                                Destinations.generateEditNote(
-                                    note.creationDate,
-                                    false,
-                                )
-                            )
+                            navigateToNote(note.creationDate, false)
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )

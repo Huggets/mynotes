@@ -196,6 +196,12 @@ fun NoteApp(
     val navigateUp: () -> Unit = {
         navigationController.popBackStack()
     }
+    val navigateUpWithReturnValue = {
+        navigationController.popBackStack()
+    }
+    val navigateToNote = { creationDate: Date, isNew: Boolean ->
+        navigationController.navigate(Destinations.generateEditNote(creationDate, isNew))
+    }
 
     noteViewModel.syncUiState()
 
@@ -215,7 +221,8 @@ fun NoteApp(
                 ) {
                     NoteListActivity(
                         quitApplication,
-                        navigationController,
+                        navigateUpWithReturnValue,
+                        navigateToNote,
                         appState,
                         fabPosition,
                         deleteNotes,
@@ -234,12 +241,13 @@ fun NoteApp(
                     popEnterTransition = enterEditNotePopTransition,
                 ) { backStackEntry ->
                     NoteEditingActivity(
-                        navigationController,
                         appState,
                         getCreationDate(backStackEntry.arguments!!),
                         createNote,
                         updateNote,
                         deleteNote,
+                        navigateUp,
+                        navigateToNote,
                         false,
                     )
                 }
@@ -251,12 +259,13 @@ fun NoteApp(
                     popEnterTransition = enterEditNotePopTransition,
                 ) { backStackEntry ->
                     NoteEditingActivity(
-                        navigationController,
                         appState,
                         getCreationDate(backStackEntry.arguments!!),
                         createNote,
                         updateNote,
                         deleteNote,
+                        navigateUp,
+                        navigateToNote,
                         true,
                     )
                 }

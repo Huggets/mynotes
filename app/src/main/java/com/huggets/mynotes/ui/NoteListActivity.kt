@@ -1,7 +1,5 @@
 package com.huggets.mynotes.ui
 
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.*
@@ -20,11 +18,9 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
 import com.huggets.mynotes.*
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
@@ -63,7 +59,8 @@ private val emphasizedFloat = Value.Animation.emphasized<Float>()
 @Composable
 fun NoteListActivity(
     quitApplication: () -> Unit,
-    navigationController: NavHostController,
+    navigateUp: () -> Boolean,
+    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit,
     appState: State<NoteAppUiState>,
     fabPosition: MutableState<FabPosition>,
     deleteNotes: (creationDates: List<Date>) -> Unit,
@@ -90,13 +87,22 @@ fun NoteListActivity(
         fabWasShown.value = fabTransitionState.targetState
     }
 
-    BackPressHandler(
-        navigationController,
-        quitApplication,
-        selectionMode,
-        isNoteSelected,
-        selectedCount
-    )
+    BackPressHandler {
+        if (selectionMode.value) {
+            // Unselect all notes
+            selectionMode.value = false
+            selectedCount.value = 0
+
+            for (noteCreationDate in isNoteSelected.keys) {
+                isNoteSelected[noteCreationDate] = false
+            }
+        } else {
+            val navigationFailed = !navigateUp()
+            if (navigationFailed) {
+                quitApplication()
+            }
+        }
+    }
 
     BoxWithConstraints {
         fabPosition.value =
@@ -114,7 +120,7 @@ fun NoteListActivity(
                 )
             },
             floatingActionButton = {
-                Fab(navigationController, this, fabTransitionState, createNote)
+                Fab(navigateToNote, this, fabTransitionState, createNote)
             },
             floatingActionButtonPosition = fabPosition.value,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -133,13 +139,13 @@ fun NoteListActivity(
             }
 
             NoteElementList(
-                navigationController,
                 appState,
                 selectionMode,
                 isNoteSelected,
                 selectedCount,
                 fabTransitionState,
                 fabWasShown,
+                navigateToNote,
                 Modifier.padding(padding)
             )
 
@@ -165,56 +171,14 @@ fun NoteListActivity(
 }
 
 @Composable
-private fun BackPressHandler(
-    navigationController: NavHostController,
-    quitApplication: () -> Unit,
-    selectionMode: MutableState<Boolean>,
-    isNoteSelected: SnapshotStateMap<Date, Boolean>,
-    selectedCount: MutableState<Int>,
-) {
-    val onBackPressed = remember {
-        object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (selectionMode.value) {
-                    // Unselect all notes
-                    selectionMode.value = false
-                    selectedCount.value = 0
-
-                    for (noteCreationDate in isNoteSelected.keys) {
-                        isNoteSelected[noteCreationDate] = false
-                    }
-                } else {
-                    val navigationFailed = !navigationController.navigateUp()
-                    if (navigationFailed) {
-                        quitApplication()
-                    }
-                }
-            }
-        }
-    }
-    val backDispatcher = LocalOnBackPressedDispatcherOwner.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner, backDispatcher) {
-        backDispatcher?.onBackPressedDispatcher?.addCallback(
-            lifecycleOwner, onBackPressed
-        )
-
-        onDispose {
-            onBackPressed.remove()
-        }
-    }
-}
-
-@Composable
 private fun NoteElementList(
-    navigationController: NavHostController,
     appState: State<NoteAppUiState>,
     selectionMode: MutableState<Boolean>,
     isNoteSelected: SnapshotStateMap<Date, Boolean>,
     selectedCount: MutableState<Int>,
     fabTransitionState: MutableTransitionState<Boolean>,
     fabWasShown: MutableState<Boolean>,
+    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val onClick: (noteCreationDate: Date) -> Unit = { noteCreationDate ->
@@ -230,12 +194,7 @@ private fun NoteElementList(
                 }
             }
         } else {
-            navigationController.navigate(
-                Destinations.generateEditNote(
-                    noteCreationDate,
-                    false,
-                )
-            )
+            navigateToNote(noteCreationDate, false)
         }
     }
     val onLongClick: (noteCreationDate: Date) -> Unit = { noteCreationDate ->
@@ -437,15 +396,14 @@ private fun AppBar(
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun Fab(
-    navigationController: NavHostController,
+    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit,
     constraintsScope: BoxWithConstraintsScope,
     transitionState: MutableTransitionState<Boolean>,
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
 ) {
     val openNewNote: () -> Unit = {
         createNote(null) { newNoteCreationDate ->
-            val destination = Destinations.generateEditNote(newNoteCreationDate, true)
-            navigationController.navigate(destination)
+            navigateToNote(newNoteCreationDate, true)
         }
     }
     val label = "Add a new note"
