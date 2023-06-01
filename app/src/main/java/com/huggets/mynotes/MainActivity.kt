@@ -1,6 +1,8 @@
 package com.huggets.mynotes
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -25,25 +27,28 @@ import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
 
+    private val requestBluetoothActivationActivityLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult())
+        {
+            if (it.resultCode == RESULT_OK) {
+                bluetoothConnectionManager!!.onBluetoothActivationRequestAccepted()
+            } else {
+                bluetoothConnectionManager!!.onBluetoothActivationRequestDenied()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val bluetoothConnectionManager = BluetoothConnectionManager(
-            getSystemService(BluetoothManager::class.java),
-            packageManager
-        )
+        if (bluetoothConnectionManager == null) {
+            bluetoothConnectionManager = BluetoothConnectionManager(
+                getSystemService(BluetoothManager::class.java),
+                packageManager
+            )
+        }
 
-        val requestBluetoothActivationActivityLauncher =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                if (it.resultCode == RESULT_OK) {
-                    bluetoothConnectionManager.onBluetoothActivationRequestAccepted()
-                } else {
-                    bluetoothConnectionManager.onBluetoothActivationRequestDenied()
-                }
-            }
-        val requestBluetoothActivationCallback: () -> Unit = {
-            val enableBluetoothIntent =
-                android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+        bluetoothConnectionManager!!.setRequestBluetoothActivationCallback {
+            val enableBluetoothIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestBluetoothActivationActivityLauncher.launch(enableBluetoothIntent)
         }
 
@@ -51,13 +56,9 @@ class MainActivity : ComponentActivity() {
             MutableCreationExtras().also { extras ->
                 extras[NoteViewModel.APPLICATION_KEY_EXTRAS] = application
                 extras[NoteViewModel.BLUETOOTH_CONNECTION_MANAGER_KEY_EXTRAS] =
-                    bluetoothConnectionManager
+                    bluetoothConnectionManager!!
             }
         }) { NoteViewModel.Factory }
-
-        bluetoothConnectionManager.setRequestBluetoothActivationCallback(
-            requestBluetoothActivationCallback
-        )
 
         var showSnackbar: MutableState<Boolean>? = null
         var snackbarMessage: MutableState<String>? = null
@@ -143,5 +144,9 @@ class MainActivity : ComponentActivity() {
                 snackbarHostState = snackbarHostState,
             )
         }
+    }
+
+    companion object {
+        private var bluetoothConnectionManager: BluetoothConnectionManager? = null
     }
 }
