@@ -7,11 +7,13 @@ import kotlinx.coroutines.flow.Flow
 interface NoteDao {
     @Query(
         """
-        INSERT INTO note (title, content, creation_date, last_edit_time)
-        VALUES (:title, :content, :creationDate, :lastEditTime)
+            INSERT INTO note (title, content, creation_date, last_edit_time)
+            SELECT :title, :content, :creationDate, :lastEditTime
+            WHERE NOT EXISTS (SELECT *  FROM note WHERE creation_date = :creationDate)
         """
     )
     suspend fun insert(title: String, content: String, creationDate: Date, lastEditTime: Date)
+
 
     @Query(
         """
