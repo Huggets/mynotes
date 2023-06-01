@@ -159,15 +159,27 @@ class DataSynchronizer(
         // Get the last deleted notes to avoid inserting notes that were deleted on this device
         val updatedDeletedNotes = deletedNoteRepository.getAllDeletedNotes()
 
+        // Get the notes of the device to know if the fetched notes need to be inserted
+        // or updated
+        val existingNotes = noteRepository.getAllNotes()
+
         sharedData.requestedNoteReceiver.obtain().forEach { note ->
             // Try to find if the note was deleted
             val deletedNote = updatedDeletedNotes.find { deletedNote ->
                 deletedNote.creationDate == note.creationDate
             }
 
-            // If the note was not deleted, insert it
+            // If the note was not deleted, insert or update it
             if (deletedNote == null) {
-                noteRepository.insert(note)
+                val exists = existingNotes.find { existingNote ->
+                    existingNote.creationDate == note.creationDate
+                } != null
+
+                if (exists) {
+                    noteRepository.update(note)
+                } else {
+                    noteRepository.insert(note)
+                }
             }
         }
         sharedData.associationsReceiver.obtain().forEach {
