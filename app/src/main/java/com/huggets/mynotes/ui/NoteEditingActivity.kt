@@ -360,20 +360,17 @@ private fun AssociatedNoteElement(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
-        modifier = modifier
-            .clickable { onClick() }
-            .onGloballyPositioned {
-                surfaceWidth = with(density) { it.size.width.toDp() }
-            },
+        modifier = modifier.onGloballyPositioned {
+            surfaceWidth = with(density) { it.size.width.toDp() }
+        },
     ) {
-        Row(modifier = Modifier.padding(Value.smallPadding)) {
-            val fontSize = 16.sp
-
+        Row(modifier = Modifier.clickable { onClick() }) {
             Text(
                 text = text.ifBlank { "No title" },
                 fontWeight = FontWeight.Bold,
-                fontSize = fontSize,
+                fontSize = 16.sp,
                 maxLines = 2,
+                modifier = Modifier.padding(Value.smallPadding),
             )
         }
     }
