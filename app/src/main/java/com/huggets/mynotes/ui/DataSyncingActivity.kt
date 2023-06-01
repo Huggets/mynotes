@@ -86,7 +86,7 @@ fun DataSyncingActivity(
         Box(
             Modifier
                 .padding(it)
-                .padding(Value.smallPadding)
+                .padding(Values.smallPadding)
                 .fillMaxSize()
         ) {
             val center = Modifier
@@ -134,7 +134,7 @@ fun DataSyncingActivity(
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier
                                 .align(Alignment.CenterHorizontally)
-                                .padding(0.dp, Value.smallPadding)
+                                .padding(0.dp, Values.smallPadding)
                                 .fillMaxWidth(),
                             textAlign = TextAlign.Center,
                         )
@@ -182,7 +182,7 @@ private fun BluetoothDevices(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
+        verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
         modifier = modifier,
     ) {
         item(0) {
@@ -190,7 +190,7 @@ private fun BluetoothDevices(
                 text = "If you don't see your device, please pair it with your phone first." +
                         " (You can do it in your phone's Bluetooth settings.)",
                 modifier = Modifier
-                    .padding(0.dp, Value.smallPadding)
+                    .padding(0.dp, Values.smallPadding)
                     .fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -201,7 +201,7 @@ private fun BluetoothDevices(
                     Text(
                         text = "No paired devices.",
                         modifier = Modifier
-                            .padding(0.dp, Value.smallPadding)
+                            .padding(0.dp, Values.smallPadding)
                             .align(Alignment.Center),
                         textAlign = TextAlign.Center,
                     )
@@ -234,7 +234,7 @@ private fun Device(
             text = name,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(Value.smallPadding),
+            modifier = Modifier.padding(Values.smallPadding),
         )
     }
 }

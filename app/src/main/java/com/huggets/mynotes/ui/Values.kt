@@ -4,7 +4,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
-object Value {
+object Values {
     val smallPadding = 12.dp
     val smallSpacing = 8.dp
 

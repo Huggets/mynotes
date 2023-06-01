@@ -54,7 +54,7 @@ private val saver = Saver<SnapshotStateMap<Date, Boolean>, String>(save = {
     map
 })
 
-private val emphasizedFloat = Value.Animation.emphasized<Float>()
+private val emphasizedFloat = Values.Animation.emphasized<Float>()
 
 @Composable
 fun NoteListActivity(
@@ -106,7 +106,7 @@ fun NoteListActivity(
 
     BoxWithConstraints {
         fabPosition.value =
-            if (this.maxWidth < Value.Limit.minWidthRequiredFabToLeft) FabPosition.Center
+            if (this.maxWidth < Values.Limit.minWidthRequiredFabToLeft) FabPosition.Center
             else FabPosition.End
 
         Scaffold(
@@ -211,7 +211,7 @@ private fun NoteElementList(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .padding(Value.smallPadding)
+                .padding(Values.smallPadding)
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center)
@@ -221,7 +221,7 @@ private fun NoteElementList(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(Value.smallPadding)
+                .padding(Values.smallPadding)
         ) {
             Text(
                 text = "No notes", fontSize = 20.sp, modifier = Modifier.align(Alignment.Center)
@@ -255,9 +255,9 @@ private fun NoteElementList(
 
         LazyColumn(
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
+            verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
             modifier = modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(0.dp, Value.smallSpacing),
+            contentPadding = PaddingValues(0.dp, Values.smallSpacing),
         ) {
             for (mainNoteCreationDate in appState.value.mainNoteCreationDates) {
                 item(key = mainNoteCreationDate.hashCode()) {
@@ -290,7 +290,7 @@ private fun NoteElement(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
-        modifier = modifier.padding(Value.smallPadding, 0.dp),
+        modifier = modifier.padding(Values.smallPadding, 0.dp),
     ) {
         val selectionState = remember { MutableTransitionState(isSelected == true) }
         selectionState.targetState = isSelected == true
@@ -302,7 +302,7 @@ private fun NoteElement(
                     onLongClick = { onLongClick(note.creationDate) }),
         ) {
             Column(
-                modifier = Modifier.padding(Value.smallPadding),
+                modifier = Modifier.padding(Values.smallPadding),
             ) {
                 Text(
                     text = note.title.ifBlank { "No title" },
@@ -414,7 +414,7 @@ private fun Fab(
         enter = scaleIn(emphasizedFloat),
         exit = scaleOut(emphasizedFloat),
     ) {
-        if (constraintsScope.maxWidth < Value.Limit.minWidthRequiredExtendedFab) {
+        if (constraintsScope.maxWidth < Values.Limit.minWidthRequiredExtendedFab) {
             FloatingActionButton(onClick = openNewNote) {
                 icon.invoke()
             }

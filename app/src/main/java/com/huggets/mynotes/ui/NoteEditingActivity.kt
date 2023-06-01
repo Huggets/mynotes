@@ -135,20 +135,20 @@ fun NoteEditingActivity(
 
                 val swipeDuration = 300
                 val swipeInLeftTransition =
-                    slideInHorizontally(Value.Animation.emphasized(swipeDuration)) { (it + it * Value.Animation.slideOffset).toInt() }
+                    slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
                 val swipeInRightTransition =
-                    slideInHorizontally(Value.Animation.emphasized(swipeDuration)) { -(it + it * Value.Animation.slideOffset).toInt() }
+                    slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
                 val swipeOutLeftTransition =
-                    slideOutHorizontally(Value.Animation.emphasized(swipeDuration)) { -(it + it * Value.Animation.slideOffset).toInt() }
+                    slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
                 val swipeOutRightTransition =
-                    slideOutHorizontally(Value.Animation.emphasized(swipeDuration)) { (it + it * Value.Animation.slideOffset).toInt() }
+                    slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
 
                 Tab(
                     index = index,
                     editingVisibilityState = editingVisibilityState,
                     associationVisibilityState = associationVisibilityState,
                     swipeDuration = swipeDuration,
-                    modifier = Modifier.padding(Value.smallPadding, 0.dp),
+                    modifier = Modifier.padding(Values.smallPadding, 0.dp),
                 )
 
                 Box {
@@ -197,7 +197,7 @@ fun NoteEditingActivity(
                             notes = appState.value.allNotes,
                             createNote = createNote,
                             navigateToNote = navigateToNote,
-                            modifier = Modifier.padding(Value.smallPadding),
+                            modifier = Modifier.padding(Values.smallPadding),
                         )
                     }
                 }
@@ -236,13 +236,13 @@ private fun Tab(
         indicator = { tabPositions ->
             val transition = updateTransition(index.value, label = "tabSwitch")
             val indicatorStart by transition.animateDp(
-                { Value.Animation.emphasized(swipeDuration) }, label = "tabSwitchStart"
+                { Values.Animation.emphasized(swipeDuration) }, label = "tabSwitchStart"
             ) {
                 tabPositions[it].left
             }
 
             val indicatorEnd by transition.animateDp(
-                { Value.Animation.emphasized(swipeDuration) }, label = "tabSwitchEnd"
+                { Values.Animation.emphasized(swipeDuration) }, label = "tabSwitchEnd"
             ) {
                 tabPositions[it].right
             }
@@ -286,7 +286,7 @@ private fun AssociatedNotes(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
+        verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
         modifier = modifier,
     ) {
         item(0) {
@@ -342,7 +342,7 @@ private fun AssociatedNoteElement(
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 maxLines = 2,
-                modifier = Modifier.padding(Value.smallPadding),
+                modifier = Modifier.padding(Values.smallPadding),
             )
         }
     }
