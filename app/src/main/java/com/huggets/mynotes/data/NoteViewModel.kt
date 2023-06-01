@@ -1,6 +1,5 @@
 package com.huggets.mynotes.data
 
-import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.util.Xml
@@ -21,7 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlSerializer
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -38,26 +36,33 @@ class NoteViewModel(
     val uiState = _uiState.asStateFlow()
 
     init {
-        bluetoothConnectionManager.setOnBluetoothActivationRequestDeniedCallback {
+        val updateBluetoothState = {
             _uiState.value = _uiState.value.copy(
                 dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
                     bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
+                    bluetoothPermissionGranted = bluetoothConnectionManager.isBluetoothPermissionGranted(),
                 )
             )
-            updateBondedBluetoothDevices()
+        }
+        bluetoothConnectionManager.setOnBluetoothActivationRequestDeniedCallback {
+            updateBluetoothState.invoke()
         }
         bluetoothConnectionManager.setOnBluetoothActivationRequestAcceptedCallback {
-            _uiState.value = _uiState.value.copy(
-                dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
-                    bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
-                )
-            )
+            updateBluetoothState.invoke()
             updateBondedBluetoothDevices()
+        }
+        bluetoothConnectionManager.setOnBluetoothPermissionDeniedCallback {
+            updateBluetoothState.invoke()
+        }
+        bluetoothConnectionManager.setOnBluetoothPermissionGrantedCallback {
+            updateBluetoothState.invoke()
+            bluetoothConnectionManager.requestBluetoothActivation()
         }
 
         _uiState.value = _uiState.value.copy(
             dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
-                bluetoothAvailable = bluetoothConnectionManager.bluetoothAvailable,
+                bluetoothSupported = bluetoothConnectionManager.isBluetoothSupported(),
+                bluetoothPermissionGranted = bluetoothConnectionManager.isBluetoothPermissionGranted(),
                 bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
             )
         )
@@ -311,11 +316,16 @@ class NoteViewModel(
         }
     }
 
-    @SuppressLint("MissingPermission")
-    fun updateBondedBluetoothDevices() {
+    private fun updateBondedBluetoothDevices() {
         val bondedDevices = mutableMapOf<String, String>().apply {
-            bluetoothConnectionManager.bondedDevices.forEach {
-                put(it.address, it.name)
+            bluetoothConnectionManager.getBondedDevices().forEach {
+                try {
+                    put(it.address, it.name)
+                } catch (e: SecurityException) {
+                    // This happens when the user has revoked the location permission
+                    // for the app. In this case, we can't get the name of the device.
+                    put(it.address, it.address)
+                }
             }
         }
         _uiState.value = _uiState.value.copy(
@@ -334,11 +344,13 @@ class NoteViewModel(
             )
         )
 
-        if (!bluetoothConnectionManager.bluetoothAvailable) {
+        if (!bluetoothConnectionManager.isBluetoothSupported()) {
             return
         }
 
-        if (!bluetoothConnectionManager.bluetoothEnabled) {
+        if (!bluetoothConnectionManager.isBluetoothPermissionGranted()) {
+            bluetoothConnectionManager.requestBluetoothPermission()
+        } else if (!bluetoothConnectionManager.bluetoothEnabled) {
             bluetoothConnectionManager.requestBluetoothActivation()
         } else {
             updateBondedBluetoothDevices()
@@ -356,7 +368,7 @@ class NoteViewModel(
     }
 
     fun connectToBluetoothDevice(deviceAddress: String) {
-        val device = bluetoothConnectionManager.bondedDevices.find {
+        val device = bluetoothConnectionManager.getBondedDevices().find {
             it.address.equals(deviceAddress)
         } ?: return
 
@@ -413,7 +425,7 @@ class NoteViewModel(
         }
     }
 
-    private fun onBluetoothConnectionError(exception: IOException) {
+    private fun onBluetoothConnectionError(exception: Exception) {
         _uiState.value = _uiState.value.copy(
             dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
                 connecting = false,

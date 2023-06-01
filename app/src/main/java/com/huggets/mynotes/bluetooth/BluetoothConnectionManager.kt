@@ -1,12 +1,10 @@
 package com.huggets.mynotes.bluetooth
 
-import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
-import android.content.pm.PackageManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -20,18 +18,16 @@ import kotlin.random.Random
  * Manages the Bluetooth connection.
  *
  * @param bluetoothManager The Bluetooth manager used to do the bluetooth operations.
- * @param packageManager The package manager used to check if the device has Bluetooth.
+ * @property isBluetoothSupported A function that returns whether the Bluetooth is supported by the
+ * device.
+ * @property isBluetoothPermissionGranted A function that returns whether the Bluetooth permission is
+ * granted.
  */
 class BluetoothConnectionManager(
     bluetoothManager: BluetoothManager,
-    packageManager: PackageManager,
+    val isBluetoothSupported: () -> Boolean,
+    val isBluetoothPermissionGranted: () -> Boolean,
 ) {
-    /**
-     * Whether the device has Bluetooth.
-     */
-    val bluetoothAvailable =
-        packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
-
     /**
      * The Bluetooth adapter used to do the bluetooth operations.
      */
@@ -57,6 +53,21 @@ class BluetoothConnectionManager(
      * Function to call when the Bluetooth activation request is denied.
      */
     private var bluetoothActivationRequestDeniedCallback: (() -> Unit)? = null
+
+    /**
+     * Function to call to request the Bluetooth permission.
+     */
+    private var requestBluetoothPermissionCallback: (() -> Unit)? = null
+
+    /**
+     * Function to call when the Bluetooth permission request is accepted.
+     */
+    private var bluetoothPermissionGrantedCallback: (() -> Unit)? = null
+
+    /**
+     * Function to call when the Bluetooth permission request is denied.
+     */
+    private var bluetoothPermissionDeniedCallback: (() -> Unit)? = null
 
     /**
      * A bluetooth server socket used to accept and establish a connection.
@@ -92,11 +103,15 @@ class BluetoothConnectionManager(
     private var isConnecting = false
 
     /**
-     * A set of bluetooth devices that are bonded to this device.
+     * @return A set of bluetooth devices that are paired with this device.
      */
-    val bondedDevices: Set<BluetoothDevice>
-        @SuppressLint("MissingPermission")
-        get() = bluetoothAdapter?.bondedDevices ?: emptySet()
+    fun getBondedDevices(): Set<BluetoothDevice> {
+        return try {
+            bluetoothAdapter?.bondedDevices ?: emptySet()
+        } catch (e: SecurityException) {
+            emptySet()
+        }
+    }
 
     /**
      * Requests the Bluetooth to be enabled.
@@ -141,17 +156,58 @@ class BluetoothConnectionManager(
     }
 
     /**
+     * Requests the Bluetooth permission.
+     */
+    fun requestBluetoothPermission() {
+        requestBluetoothPermissionCallback?.invoke()
+    }
+
+    /**
+     * Sets the callback to call when the Bluetooth permission is requested.
+     */
+    fun setRequestBluetoothPermissionCallback(callback: () -> Unit) {
+        requestBluetoothPermissionCallback = callback
+    }
+
+    /**
+     * Called when the Bluetooth permission is granted.
+     */
+    fun onBluetoothPermissionGranted() {
+        bluetoothPermissionGrantedCallback?.invoke()
+    }
+
+    /**
+     * Sets the callback to call when the Bluetooth permission is granted.
+     */
+    fun setOnBluetoothPermissionGrantedCallback(callback: () -> Unit) {
+        bluetoothPermissionGrantedCallback = callback
+    }
+
+    /**
+     * Called when the Bluetooth permission is denied.
+     */
+    fun onBluetoothPermissionDenied() {
+        bluetoothPermissionDeniedCallback?.invoke()
+    }
+
+    /**
+     * Sets the callback to call when the Bluetooth permission is denied.
+     */
+    fun setOnBluetoothPermissionDeniedCallback(callback: () -> Unit) {
+        bluetoothPermissionDeniedCallback = callback
+    }
+
+    /**
      * Try connecting to the given device.
      *
      * @param device The device to connect to.
      * @param onConnectionEstablished The function to call when the connection is established.
      * @param onConnectionError The function to call when an error occurs during the connection.
      */
-    @SuppressLint("MissingPermission")
     fun connect(
         device: BluetoothDevice,
         onConnectionEstablished: () -> Unit = {},
-        onConnectionError: (IOException) -> Unit = {},
+        onConnectionError: (Exception) -> Unit = {},
     ) {
         // If the bluetooth adapter is null, bluetooth is not available.
         // If the device is already connecting, do nothing.
@@ -162,7 +218,7 @@ class BluetoothConnectionManager(
 
         isConnecting = true
 
-        var exception: IOException? = null
+        var exception: Exception? = null
 
         // Try to connect to the device. Try to create a server socket and a client socket.
         // If both are created, choose one randomly and close the other one. If only one is created,
@@ -175,11 +231,17 @@ class BluetoothConnectionManager(
             } catch (e: IOException) {
                 exception = e
                 return@launch
+            } catch (e: SecurityException) {
+                exception = e
+                return@launch
             }
 
             clientSocket = try {
                 device.createRfcommSocketToServiceRecord(SERVICE_UUID)
             } catch (e: IOException) {
+                exception = e
+                return@launch
+            } catch (e: SecurityException) {
                 exception = e
                 return@launch
             }
@@ -206,6 +268,12 @@ class BluetoothConnectionManager(
                     clientSocket!!.connect()
                     false
                 } catch (e: IOException) {
+                    // Keep the first exception
+                    if (exception == null) {
+                        exception = e
+                    }
+                    true
+                } catch (e: SecurityException) {
                     // Keep the first exception
                     if (exception == null) {
                         exception = e

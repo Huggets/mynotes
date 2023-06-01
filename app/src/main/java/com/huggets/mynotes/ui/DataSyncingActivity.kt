@@ -64,8 +64,17 @@ fun DataSyncingActivity(
                 .align(Alignment.Center)
                 .fillMaxWidth()
 
-            if (!appState.value.dataSyncingUiState.bluetoothAvailable) {
-                val message = "Bluetooth is not available on this device."
+            if (!appState.value.dataSyncingUiState.bluetoothSupported) {
+                val message = "Bluetooth is not supported on this device."
+                Text(
+                    text = message,
+                    modifier = center,
+                    textAlign = TextAlign.Center,
+                )
+            } else if (!appState.value.dataSyncingUiState.bluetoothPermissionGranted) {
+                val message =
+                    "Bluetooth permission is not granted. Please grant it if you want to sync" +
+                            " your notes.\n"
                 Text(
                     text = message,
                     modifier = center,
@@ -147,11 +156,35 @@ private fun BluetoothDevices(
         verticalArrangement = Arrangement.spacedBy(Value.smallSpacing),
         modifier = modifier,
     ) {
-        appState.value.dataSyncingUiState.bondedDevices.forEach { device ->
-            val syncWithClickedDevice = { syncWithDevice(device.key) }
+        item(0) {
+            Text(
+                text = "If you don't see your device, please pair it with your phone first." +
+                        " (You can do it in your phone's Bluetooth settings.)",
+                modifier = Modifier
+                    .padding(0.dp, Value.smallPadding)
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+        }
+        if (appState.value.dataSyncingUiState.bondedDevices.isEmpty()) {
+            item(1) {
+                Box(Modifier.fillMaxSize()) {
+                    Text(
+                        text = "No paired devices.",
+                        modifier = Modifier
+                            .padding(0.dp, Value.smallPadding)
+                            .align(Alignment.Center),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        } else {
+            appState.value.dataSyncingUiState.bondedDevices.forEach { device ->
+                val syncWithClickedDevice = { syncWithDevice(device.key) }
 
-            item(device.key) {
-                Device(device.value, syncWithClickedDevice)
+                item(device.key) {
+                    Device(device.value, syncWithClickedDevice)
+                }
             }
         }
     }

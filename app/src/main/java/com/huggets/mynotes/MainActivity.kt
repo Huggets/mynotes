@@ -1,8 +1,11 @@
 package com.huggets.mynotes
 
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -15,6 +18,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
 import com.huggets.mynotes.data.NoteViewModel
@@ -27,7 +31,22 @@ import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
 
-    private val requestBluetoothActivationActivityLauncher =
+    /**
+     * Activity launcher for requesting Bluetooth permission.
+     */
+    private val requestBluetoothPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            if (it) {
+                bluetoothConnectionManager!!.onBluetoothPermissionGranted()
+            } else {
+                bluetoothConnectionManager!!.onBluetoothPermissionDenied()
+            }
+        }
+
+    /**
+     * Activity launcher for requesting Bluetooth activation.
+     */
+    private val requestBluetoothActivationLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult())
         {
             if (it.resultCode == RESULT_OK) {
@@ -37,19 +56,81 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    /**
+     * Indicates whether the BLUETOOTH_CONNECT permission is granted.
+     *
+     * On Android 11 and below, this permission does not exist and is always granted.
+     *
+     * @return true if the permission is granted, false otherwise.
+     */
+    private fun isBluetoothPermissionGranted(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Indicates whether this device supports Bluetooth.
+     *
+     * @return true if Bluetooth is supported, false otherwise.
+     */
+    private fun isBluetoothSupported(): Boolean {
+        return packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
+    }
+
+    /**
+     * Ask the user to activate Bluetooth.
+     */
+    private fun requestBluetoothActivation() {
+        val enableBluetoothIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+        requestBluetoothActivationLauncher.launch(enableBluetoothIntent)
+    }
+
+    /**
+     * Ask the user to grant the BLUETOOTH_CONNECT permission.
+     */
+    private fun requestBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    bluetoothConnectionManager!!.onBluetoothPermissionGranted()
+                }
+
+                shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_CONNECT) -> {
+                    bluetoothConnectionManager!!.onBluetoothPermissionDenied()
+                }
+
+                else -> {
+                    requestBluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                }
+            }
+        } else {
+            // On Android 11 and below, the BLUETOOTH_CONNECT permission does not exist and is
+            // always granted.
+            bluetoothConnectionManager!!.onBluetoothPermissionGranted()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         if (bluetoothConnectionManager == null) {
             bluetoothConnectionManager = BluetoothConnectionManager(
                 getSystemService(BluetoothManager::class.java),
-                packageManager
+                ::isBluetoothSupported,
+                ::isBluetoothPermissionGranted,
             )
-        }
 
-        bluetoothConnectionManager!!.setRequestBluetoothActivationCallback {
-            val enableBluetoothIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            requestBluetoothActivationActivityLauncher.launch(enableBluetoothIntent)
+            bluetoothConnectionManager!!.setRequestBluetoothActivationCallback(::requestBluetoothActivation)
+            bluetoothConnectionManager!!.setRequestBluetoothPermissionCallback(::requestBluetoothPermission)
         }
 
         val noteViewModel by viewModels<NoteViewModel>({
