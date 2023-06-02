@@ -1,10 +1,11 @@
 package com.huggets.mynotes.ui
 
+import android.util.Log
 import androidx.compose.animation.*
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -18,415 +19,540 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huggets.mynotes.*
 import com.huggets.mynotes.R
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
-import com.huggets.mynotes.ui.state.find
 
-private val saver = Saver<SnapshotStateMap<Date, Boolean>, String>(save = {
-    val builder = StringBuilder()
-    for ((creationDate, value) in it) {
-        builder.append(creationDate)
-        builder.append("@")
-        builder.append(value)
-        builder.append(';')
-    }
-    if (builder.lastIndex != -1) {
-        builder.delete(builder.lastIndex, builder.lastIndex + 1)
-    }
-    builder.toString()
-}, restore = {
-    val map = SnapshotStateMap<Date, Boolean>()
-    val items = it.split(';')
-    if (items[0] != "") {
-        for (item in items) {
-            val (creationDateString, value) = item.split('@')
-            val creationDate = Date.fromString(creationDateString)
-            map[creationDate] = value.toBoolean()
-        }
-    }
-
-    map
-})
-
-private val emphasizedFloat = Values.Animation.emphasized<Float>()
-
+/**
+ * Display a lists of the main notes (notes that do not have a parent).
+ *
+ * @param appState The state of the app.
+ * @param snackbarHostState The state of the snackbar.
+ *
+ */
 @Composable
 fun NoteListActivity(
-    quitApplication: () -> Unit,
-    navigateUp: () -> Boolean,
-    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit,
     appState: State<NoteAppUiState>,
-    fabPosition: MutableState<FabPosition>,
-    deleteNotes: (creationDates: List<Date>) -> Unit,
-    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
-    exportToXml: () -> Unit,
-    importFromXml: () -> Unit,
-    startSyncDataWithAnotherDevice: () -> Unit,
     snackbarHostState: SnackbarHostState,
+    fabPosition: MutableState<FabPosition>,
+    quitApplication: () -> Unit = {},
+    navigateUp: () -> Boolean = { false },
+    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
+    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
+    deleteNotes: (creationDates: List<Date>) -> Unit = {},
+    exportToXml: () -> Unit = {},
+    importFromXml: () -> Unit = {},
+    startSyncDataWithAnotherDevice: () -> Unit = {},
 ) {
-    val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
-    val deleteSelectedNote: () -> Unit = { showDeleteConfirmation.value = true }
-
-    val selectionMode = rememberSaveable { mutableStateOf(false) }
-    val isNoteSelected = rememberSaveable(saver = saver) { mutableStateMapOf() }
-    val selectedCount = rememberSaveable { mutableStateOf(0) }
-
-    val fabWasShown = rememberSaveable { mutableStateOf(true) }
-    val fabTransitionState = remember { MutableTransitionState(fabWasShown.value) }
-    val deleteIconTransitionState = remember { MutableTransitionState(selectionMode.value) }
-
-    fabTransitionState.targetState = if (fabWasShown.value) !selectionMode.value else false
-    deleteIconTransitionState.targetState = selectionMode.value
-    if (!selectionMode.value) {
-        fabWasShown.value = fabTransitionState.targetState
-    }
+    val inSelectionMode = rememberSaveable { mutableStateOf(false) }
+    val notesSelectionState = rememberSaveable(saver = selectedNotesSaver) { mutableStateMapOf() }
+    val selectedNotesCount = rememberSaveable { mutableStateOf(0) }
 
     BackPressHandler {
-        if (selectionMode.value) {
+        if (inSelectionMode.value) {
             // Unselect all notes
-            selectionMode.value = false
-            selectedCount.value = 0
+            inSelectionMode.value = false
+            selectedNotesCount.value = 0
 
-            for (noteCreationDate in isNoteSelected.keys) {
-                isNoteSelected[noteCreationDate] = false
+            notesSelectionState.keys.forEach {
+                notesSelectionState[it] = false
             }
         } else {
-            val navigationFailed = !navigateUp()
-            if (navigationFailed) {
+            val navigateUpFailed = !navigateUp()
+            if (navigateUpFailed) {
                 quitApplication()
             }
         }
     }
 
     BoxWithConstraints {
+        val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
+        var shouldFabBeShown by rememberSaveable { mutableStateOf(true) }
+
         fabPosition.value =
-            if (this.maxWidth < Values.Limit.minWidthRequiredFabToLeft) FabPosition.Center
-            else FabPosition.End
+            if (maxWidth < Values.Limit.minWidthRequiredFabToLeft)
+                FabPosition.Center
+            else
+                FabPosition.End
 
         Scaffold(
             topBar = {
                 AppBar(
-                    deleteSelectedNote = deleteSelectedNote,
-                    deleteIconState = deleteIconTransitionState,
+                    isDeleteIconVisible = { inSelectionMode.value },
+                    deleteSelectedNote = { showDeleteConfirmation.value = true },
                     exportToXml = exportToXml,
                     importFromXml = importFromXml,
                     startSyncDataWithAnotherDevice = startSyncDataWithAnotherDevice,
                 )
             },
             floatingActionButton = {
-                Fab(navigateToNote, this, fabTransitionState, createNote)
+                val label = stringResource(R.string.add_new_note)
+
+                AnimatedFab(
+                    text = label,
+                    icon = { Icon(Icons.Filled.Add, label) },
+                    isVisible = { shouldFabBeShown && !inSelectionMode.value },
+                    parentMaxWidth = maxWidth,
+                    onClick = {
+                        createNote(null) { newNoteCreationDate ->
+                            navigateToNote(newNoteCreationDate, true)
+                        }
+                    }
+                )
             },
             floatingActionButtonPosition = fabPosition.value,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { padding ->
-            var snackbarWasShown by rememberSaveable { mutableStateOf(false) }
+            // TODO Modify NoteViewModel to change importFailed to false on click instead of on result
 
-            if (appState.value.isImporting) {
-                snackbarWasShown = false
+            var snackbarNotShown by rememberSaveable(appState.value.importFailed) {
+                mutableStateOf(appState.value.importFailed)
             }
 
-            if (appState.value.importFailed && !snackbarWasShown) {
-                LaunchedEffect(snackbarHostState) {
+            LaunchedEffect(appState.value.importFailed) {
+                if (appState.value.importFailed && snackbarNotShown) {
                     snackbarHostState.showSnackbar(appState.value.importFailedMessage)
-                    snackbarWasShown = true
+                    snackbarNotShown = false
                 }
             }
 
-            NoteElementList(
-                appState,
-                selectionMode,
-                isNoteSelected,
-                selectedCount,
-                fabTransitionState,
-                fabWasShown,
-                navigateToNote,
-                Modifier.padding(padding)
-            )
-
             ConfirmationDialog(
-                displayDialog = showDeleteConfirmation, onConfirmation = {
-                    selectedCount.value = 0
-                    selectionMode.value = false
+                displayDialog = showDeleteConfirmation,
+                message = stringResource(R.string.confirmation_message_delete_selected_notes),
+                onConfirm = {
+                    selectedNotesCount.value = 0
+                    inSelectionMode.value = false
 
                     val toDelete = mutableListOf<Date>()
 
-                    for ((noteCreationDate, isSelected) in isNoteSelected.entries) {
+                    notesSelectionState.entries.forEach { (noteCreationDate, isSelected) ->
                         if (isSelected) {
                             toDelete.add(noteCreationDate)
-                            isNoteSelected[noteCreationDate] = false // Unselect the note
+                            notesSelectionState[noteCreationDate] = false // Unselect the note
                         }
                     }
 
                     deleteNotes(toDelete)
-                }, message = stringResource(R.string.confirmation_message_delete_selected_notes)
+                },
+            )
+
+            MainContent(
+                appState = appState,
+                inSelectionMode = inSelectionMode,
+                notesSelectionState = notesSelectionState,
+                selectedNotesCount = selectedNotesCount,
+                navigateToNote = navigateToNote,
+                modifier = Modifier.padding(padding),
+                onScrollUp = { shouldFabBeShown = true },
+                onScrollDown = { shouldFabBeShown = false },
             )
         }
     }
 }
 
+/**
+ * The main content of the NoteListActivity.
+ *
+ * @param appState The state of the app.
+ * @param inSelectionMode Whether the user is in selection mode or not.
+ * @param notesSelectionState The state of the selection of each note.
+ * @param selectedNotesCount The number of selected notes.
+ * @param modifier The modifier to apply to the content.
+ * @param navigateToNote The function to call when the user wants to navigate to a note.
+ * @param onScrollUp The function to call when the user scrolls up.
+ * @param onScrollDown The function to call when the user scrolls down.
+ */
 @Composable
-private fun NoteElementList(
+private fun MainContent(
     appState: State<NoteAppUiState>,
-    selectionMode: MutableState<Boolean>,
-    isNoteSelected: SnapshotStateMap<Date, Boolean>,
-    selectedCount: MutableState<Int>,
-    fabTransitionState: MutableTransitionState<Boolean>,
-    fabWasShown: MutableState<Boolean>,
-    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit,
+    inSelectionMode: MutableState<Boolean>,
+    notesSelectionState: SnapshotStateMap<Date, Boolean>,
+    selectedNotesCount: MutableState<Int>,
     modifier: Modifier = Modifier,
+    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
+    onScrollUp: () -> Unit = {},
+    onScrollDown: () -> Unit = {},
 ) {
-    val onClick: (noteCreationDate: Date) -> Unit = { noteCreationDate ->
-        if (selectionMode.value) {
-            if (isNoteSelected[noteCreationDate] != true) {
-                isNoteSelected[noteCreationDate] = true
-                selectedCount.value++
-            } else {
-                isNoteSelected[noteCreationDate] = false
-                selectedCount.value--
-                if (selectedCount.value == 0) {
-                    selectionMode.value = false
-                }
-            }
-        } else {
-            navigateToNote(noteCreationDate, false)
-        }
-    }
-    val onLongClick: (noteCreationDate: Date) -> Unit = { noteCreationDate ->
-        selectionMode.value = true
-
-        if (isNoteSelected[noteCreationDate] != true) {
-            // If not already selected
-            isNoteSelected[noteCreationDate] = true
-            selectedCount.value++
-        }
-    }
-
+    Log.d("MainContent", "Recompose MainContent")
     if (appState.value.isImporting) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(Values.smallPadding)
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
+        Box(maxSizeWithPaddingModifier) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
         }
     } else if (appState.value.mainNoteCreationDates.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(Values.smallPadding)
-        ) {
+        Box(maxSizeWithPaddingModifier) {
             Text(
                 text = stringResource(R.string.no_notes),
-                fontSize = 20.sp,
+                fontSize = Values.bigFontSize,
                 modifier = Modifier.align(Alignment.Center)
             )
         }
-
     } else {
-        val listState = rememberLazyListState()
-        val lastListElementIndex =
-            rememberSaveable { mutableStateOf(listState.firstVisibleItemIndex) }
-
-        if (listState.isScrollInProgress) {
-            val currentIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
-
-            if (lastListElementIndex.value > currentIndex) {
-                lastListElementIndex.value = currentIndex
-
-                if (!selectionMode.value) {
-                    fabTransitionState.targetState = true
-                    fabWasShown.value = true
-                }
-            } else if (lastListElementIndex.value < currentIndex) {
-                lastListElementIndex.value = currentIndex
-
-                if (!selectionMode.value) {
-                    fabTransitionState.targetState = false
-                    fabWasShown.value = false
-                }
-            }
-        }
-
-        LazyColumn(
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
-            modifier = modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(0.dp, Values.smallSpacing),
-        ) {
-            for (mainNoteCreationDate in appState.value.mainNoteCreationDates) {
-                item(key = mainNoteCreationDate.hashCode()) {
-                    val note = appState.value.allNotes.find(mainNoteCreationDate)
-
-                    if (note != null) {
-                        NoteElement(
-                            note,
-                            isNoteSelected[note.creationDate],
-                            onClick,
-                            onLongClick,
-                        )
+        val onNoteClicked: (Date) -> Unit = { noteCreationDate: Date ->
+            if (inSelectionMode.value) {
+                if (notesSelectionState[noteCreationDate] != true) {
+                    notesSelectionState[noteCreationDate] = true
+                    selectedNotesCount.value++
+                } else {
+                    notesSelectionState[noteCreationDate] = false
+                    selectedNotesCount.value--
+                    if (selectedNotesCount.value == 0) {
+                        inSelectionMode.value = false
                     }
                 }
+            } else {
+                navigateToNote(noteCreationDate, false)
             }
+        }
+        val onNoteLongClicked: (Date) -> Unit = { noteCreationDate: Date ->
+            inSelectionMode.value = true
+
+            if (notesSelectionState[noteCreationDate] != true) {
+                // If not already selected
+                notesSelectionState[noteCreationDate] = true
+                selectedNotesCount.value++
+            }
+        }
+        val isNoteSelected = { noteCreationDate: Date ->
+            notesSelectionState[noteCreationDate] == true
+        }
+
+        NotesList(
+            notesToDisplay = { appState.value.mainNoteCreationDates },
+            notes = { appState.value.allNotes },
+            modifier = modifier,
+            onNoteClicked = onNoteClicked,
+            onNoteLongClicked = onNoteLongClicked,
+            isNoteSelected = isNoteSelected,
+            onScrollUp = onScrollUp,
+            onScrollDown = onScrollDown,
+        )
+    }
+}
+
+/**
+ * A list of notes.
+ *
+ * @param notesToDisplay The creation dates of the notes to display. For each creation date in this
+ * list, a note with the same creation date must exist in [notes].
+ * @param notes A list of all the notes. For each dates in [notesToDisplay], a note with the same
+ * creation date must exist in this list.
+ * @param modifier The modifier to apply to this layout.
+ * @param onNoteClicked Called when a note is clicked.
+ * @param onNoteLongClicked Called when a note is long clicked.
+ * @param isNoteSelected A lambda that returns true if the note is selected.
+ * @param onScrollUp Called when the user scrolls up.
+ * @param onScrollDown Called when the user scrolls down.
+ */
+@Composable
+private fun NotesList(
+    notesToDisplay: () -> List<Date>,
+    notes: () -> List<NoteItemUiState>,
+    modifier: Modifier = Modifier,
+    onNoteClicked: (Date) -> Unit = {},
+    onNoteLongClicked: (Date) -> Unit = {},
+    isNoteSelected: (Date) -> Boolean = { false },
+    onScrollUp: () -> Unit = {},
+    onScrollDown: () -> Unit = {},
+) {
+    // TODO Find a way to optimize the fab hiding/showing (for example by using a lambda)
+
+    val listState = rememberLazyListState()
+
+    val lastListElementIndex = rememberSaveable {
+        mutableStateOf(listState.firstVisibleItemIndex)
+    }
+
+    if (listState.isScrollInProgress) {
+        val currentIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+
+        if (lastListElementIndex.value > currentIndex || currentIndex == 0) {
+            lastListElementIndex.value = currentIndex
+            onScrollUp()
+        } else if (lastListElementIndex.value < currentIndex) {
+            lastListElementIndex.value = currentIndex
+            onScrollDown()
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
+        modifier = maxWidthModifier.then(modifier),
+        contentPadding = PaddingValues(0.dp, Values.smallSpacing),
+    ) {
+        val allNotes = notes()
+
+        items(
+            items = notesToDisplay(),
+            key = { it.hashCode() },
+        ) {
+            NoteElement(
+                note = allNotes.find { note -> note.creationDate == it }!!,
+                isSelected = { isNoteSelected(it) },
+                onClick = onNoteClicked,
+                onLongClick = onNoteLongClicked,
+            )
         }
     }
 }
 
+/**
+ * A single note element that can be selected, clicked and long clicked.
+ *
+ * @param note The note to display.
+ * @param isSelected A lambda that returns true if the note is selected.
+ * @param onClick A lambda that is called when the note is clicked.
+ * @param onLongClick A lambda that is called when the note is long clicked.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteElement(
     note: NoteItemUiState,
-    isSelected: Boolean?,
-    onClick: (noteCreationDate: Date) -> Unit,
-    onLongClick: (noteCreationDate: Date) -> Unit,
-    modifier: Modifier = Modifier,
+    isSelected: () -> Boolean = { false },
+    onClick: (noteCreationDate: Date) -> Unit = {},
+    onLongClick: (noteCreationDate: Date) -> Unit = {},
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
-        modifier = modifier.padding(Values.smallPadding, 0.dp),
+        modifier = horizontalPaddingModifier,
     ) {
-        val selectionState = remember { MutableTransitionState(isSelected == true) }
-        selectionState.targetState = isSelected == true
-
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(onClick = { onClick(note.creationDate) },
-                    onLongClick = { onLongClick(note.creationDate) }),
+            maxWidthModifier
+                .combinedClickable(
+                    onClick = { onClick(note.creationDate) },
+                    onLongClick = { onLongClick(note.creationDate) },
+                    role = Role.Button,
+                ),
         ) {
-            Column(
-                modifier = Modifier.padding(Values.smallPadding),
-            ) {
+            AnimatedSelectionSurface(isVisible = isSelected, modifier = Modifier.matchParentSize())
+
+            Column(smallPaddingModifier) {
                 Text(
                     text = note.title.ifBlank { stringResource(R.string.no_title) },
-                    fontSize = 16.sp,
+                    fontSize = Values.normalFontSize,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                 )
                 Text(
                     text = note.content,
-                    fontSize = 16.sp,
+                    fontSize = Values.normalFontSize,
                     maxLines = 5,
-                )
-            }
-            AnimatedVisibility(
-                visibleState = selectionState,
-                enter = fadeIn(emphasizedFloat),
-                exit = fadeOut(emphasizedFloat),
-                modifier = Modifier.matchParentSize(),
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .alpha(0.5f),
-                    content = {},
                 )
             }
         }
     }
 }
 
+/**
+ * An animated selection surface.
+ *
+ * @param isVisible Whether the selection should be visible.
+ * @param modifier The modifier to apply to the surface.
+ * @param color The color of the surface.
+ */
+@Composable
+private fun AnimatedSelectionSurface(
+    isVisible: () -> Boolean,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.inverseSurface,
+) {
+    AnimatedVisibility(
+        visible = isVisible(),
+        enter = fadeIn(Values.emphasizedFloat),
+        exit = fadeOut(Values.emphasizedFloat),
+        modifier = modifier,
+    ) {
+        Surface(
+            color = color,
+            modifier = modifier.alpha(0.5f),
+            content = {},
+        )
+    }
+}
+
+/**
+ * The app bar of the note list screen.
+ *
+ * @param isDeleteIconVisible Whether the delete icon should be visible.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar(
-    deleteSelectedNote: () -> Unit,
-    deleteIconState: MutableTransitionState<Boolean>,
-    exportToXml: () -> Unit,
-    importFromXml: () -> Unit,
-    startSyncDataWithAnotherDevice: () -> Unit,
-    modifier: Modifier = Modifier,
+    isDeleteIconVisible: () -> Boolean = { true },
+    deleteSelectedNote: () -> Unit = {},
+    exportToXml: () -> Unit = {},
+    importFromXml: () -> Unit = {},
+    startSyncDataWithAnotherDevice: () -> Unit = {},
 ) {
     TopAppBar(
         title = { Text(stringResource(R.string.note_list_activity_name)) },
         actions = {
-            AnimatedVisibility(
-                visibleState = deleteIconState,
-                enter = fadeIn(emphasizedFloat),
-                exit = fadeOut(emphasizedFloat),
-            ) {
-                IconButton(onClick = deleteSelectedNote) {
-                    Icon(Icons.Filled.Delete, stringResource(R.string.delete_selected_notes))
-                }
-            }
-            Row {
-                var isExpanded by rememberSaveable { mutableStateOf(false) }
-
-                IconButton(onClick = { isExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, stringResource(R.string.more_options))
-
-                }
-
-                DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.export_data)) },
-                        onClick = {
-                            exportToXml()
-                            isExpanded = false
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.import_data)) },
-                        onClick = {
-                            importFromXml()
-                            isExpanded = false
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.synchronize_data)) },
-                        onClick = {
-                            startSyncDataWithAnotherDevice()
-                            isExpanded = false
-                        },
-                    )
-                }
-            }
+            AppBarActions(
+                isDeleteIconVisible = isDeleteIconVisible,
+                deleteSelectedNote = deleteSelectedNote,
+                exportToXml = exportToXml,
+                importFromXml = importFromXml,
+                synchronizeWithAnotherDevice = startSyncDataWithAnotherDevice,
+            )
         },
-        modifier = modifier,
     )
 }
 
-@OptIn(ExperimentalAnimationApi::class)
+/**
+ * The actions that can be performed in the app bar. They are:
+ * - Delete selected notes,
+ * - Export to XML,
+ * - Import from XML,
+ * - Synchronize data with another device.
+ *
+ * @param isDeleteIconVisible Whether the delete icon should be visible.
+ * @param deleteSelectedNote Called when the delete icon is clicked.
+ * @param exportToXml Called when the export action is clicked.
+ * @param importFromXml Called when the import action is clicked.
+ * @param synchronizeWithAnotherDevice Called when the synchronize action is clicked.
+ */
 @Composable
-private fun Fab(
-    navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit,
-    constraintsScope: BoxWithConstraintsScope,
-    transitionState: MutableTransitionState<Boolean>,
-    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
+private fun AppBarActions(
+    isDeleteIconVisible: () -> Boolean = { true },
+    deleteSelectedNote: () -> Unit = {},
+    exportToXml: () -> Unit = {},
+    importFromXml: () -> Unit = {},
+    synchronizeWithAnotherDevice: () -> Unit = {},
 ) {
-    val openNewNote: () -> Unit = {
-        createNote(null) { newNoteCreationDate ->
-            navigateToNote(newNoteCreationDate, true)
+    AnimatedVisibility(
+        visible = isDeleteIconVisible(),
+        enter = fadeIn(Values.emphasizedFloat),
+        exit = fadeOut(Values.emphasizedFloat),
+    ) {
+        IconButton(onClick = deleteSelectedNote) {
+            Icon(Icons.Filled.Delete, stringResource(R.string.delete_selected_notes))
         }
     }
-    val label = stringResource(R.string.add_new_note)
-    val icon: @Composable () -> Unit = { Icon(Icons.Filled.Add, label) }
 
-    AnimatedVisibility(
-        visibleState = transitionState,
-        enter = scaleIn(emphasizedFloat),
-        exit = scaleOut(emphasizedFloat),
-    ) {
-        if (constraintsScope.maxWidth < Values.Limit.minWidthRequiredExtendedFab) {
-            FloatingActionButton(onClick = openNewNote) {
-                icon.invoke()
-            }
-        } else {
-            ExtendedFloatingActionButton(onClick = openNewNote) {
-                icon.invoke()
-                Text(text = label)
-            }
+    DropdownMenu(
+        exportToXml = exportToXml,
+        importFromXml = importFromXml,
+        synchronizeWithAnotherDevice = synchronizeWithAnotherDevice,
+    )
+}
+
+/**
+ * A dropdown menu that contains the following actions:
+ * - Export to XML,
+ * - Import from XML,
+ * - Synchronize data with another device.
+ *
+ * @param exportToXml The action to execute when the user clicks on the "export" item.
+ * @param importFromXml The action to execute when the user clicks on the "import" item.
+ * @param synchronizeWithAnotherDevice The action to execute when the user clicks on the
+ * "synchronize" item.
+ */
+@Composable
+private fun DropdownMenu(
+    exportToXml: () -> Unit = {},
+    importFromXml: () -> Unit = {},
+    synchronizeWithAnotherDevice: () -> Unit = {},
+) {
+    Box {
+        var isExpanded by rememberSaveable { mutableStateOf(false) }
+
+        IconButton(onClick = { isExpanded = true }) {
+            Icon(Icons.Filled.MoreVert, stringResource(R.string.more_options))
+        }
+
+        DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.export_data)) },
+                onClick = {
+                    isExpanded = false
+                    exportToXml()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.import_data)) },
+                onClick = {
+                    isExpanded = false
+                    importFromXml()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.synchronize_data)) },
+                onClick = {
+                    isExpanded = false
+                    synchronizeWithAnotherDevice()
+                },
+            )
         }
     }
 }
+
+/**
+ * A [Saver] that saves and restores a [SnapshotStateMap] of [Date] and [Boolean] to and from a
+ * [String].
+ */
+private val selectedNotesSaver = Saver<SnapshotStateMap<Date, Boolean>, String>(
+    save = { stateMap ->
+        StringBuilder().apply {
+            stateMap.forEach { (creationDate, isSelected) ->
+                append(creationDate)
+                append("@")
+                append(isSelected)
+                append(';')
+            }
+
+            // Remove the last semicolon.
+            if (lastIndex != -1) {
+                delete(lastIndex, lastIndex + 1)
+            }
+        }.toString()
+    }, restore = { savedString ->
+        SnapshotStateMap<Date, Boolean>().apply {
+            val items = savedString.split(';')
+
+            if (items[0] != "") {
+                items.forEach { item ->
+                    val (creationDateString, isSelectedString) = item.split('@')
+                    val creationDate = Date.fromString(creationDateString)
+                    val isSelected = isSelectedString.toBoolean()
+
+                    this[creationDate] = isSelected
+                }
+            }
+        }
+    }
+)
+
+/**
+ * Modifier that adds a padding.
+ */
+private val smallPaddingModifier = Modifier
+    .padding(Values.smallPadding)
+
+/**
+ * Modifier that adds a padding to the left and right.
+ */
+private val horizontalPaddingModifier = Modifier
+    .padding(Values.smallPadding, 0.dp)
+
+/**
+ * Modifier that adds a padding and fills the maximum size of the parent.
+ */
+private val maxSizeWithPaddingModifier = Modifier
+    .padding(Values.smallPadding)
+    .fillMaxSize()
+
+/**
+ * Modifier that fills the maximum width of the parent.
+ */
+private val maxWidthModifier = Modifier
+    .fillMaxWidth()

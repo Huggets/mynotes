@@ -1,7 +1,6 @@
 package com.huggets.mynotes.ui
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.clickable
@@ -23,6 +22,7 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huggets.mynotes.R
@@ -37,47 +37,73 @@ import com.huggets.mynotes.ui.state.find
 fun NoteEditingActivity(
     appState: State<NoteAppUiState>,
     noteCreationDate: Date,
+    isNew: Boolean,
+    navigateUp: () -> Unit,
+    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit,
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
     saveNote: (NoteItemUiState) -> Unit,
     deleteNote: (noteCreationDate: Date) -> Unit,
-    navigateUp: () -> Unit,
-    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit,
-    isNew: Boolean,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
-    val isModified = rememberSaveable { mutableStateOf(false) }
+    var isModified by rememberSaveable { mutableStateOf(false) }
+
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
-    val cancelNoteChanges: () -> Unit = {
-        if (isModified.value) {
+    val cancelNoteChanges = {
+        if (isModified) {
             showCancelConfirmation.value = true
         } else {
             if (isNew) {
                 // The note is not kept and must be deleted
-                deleteNote(noteCreationDate)
                 isDeleted = true
+                deleteNote(noteCreationDate)
             }
+
             navigateUp()
         }
     }
 
     BackPressHandler(cancelNoteChanges)
 
+    ConfirmationDialog(
+        displayDialog = showDeleteConfirmation,
+        onConfirm = {
+            deleteNote(noteCreationDate)
+            isDeleted = true
+            navigateUp()
+        },
+        message = stringResource(R.string.confirmation_message_delete_note),
+    )
+    ConfirmationDialog(
+        displayDialog = showCancelConfirmation,
+        onConfirm = {
+            if (isNew) {
+                // The note is not kept and must be deleted
+                deleteNote(noteCreationDate)
+                isDeleted = true
+            }
+            navigateUp()
+        },
+        message = stringResource(R.string.confirmation_message_cancel_changes),
+    )
+
+    // Note can be null if it was just created
     val note = appState.value.allNotes.find(noteCreationDate)
 
     if (isDeleted || note == null) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        Box(maxSizeModifier) {
+            CircularProgressIndicator(Modifier.align(Alignment.Center))
         }
     } else {
-        val title = rememberSaveable { mutableStateOf(note.title) }
-        val content = rememberSaveable { mutableStateOf(note.content) }
-        val saveChanges: () -> Unit = {
+        var title by rememberSaveable { mutableStateOf(note.title) }
+        var content by rememberSaveable { mutableStateOf(note.content) }
+
+        val saveChanges = {
             saveNote(
                 NoteItemUiState(
-                    title.value,
-                    content.value,
+                    title,
+                    content,
                     note.creationDate,
                     Date.getCurrentTime(),
                 )
@@ -91,132 +117,156 @@ fun NoteEditingActivity(
             showDeleteConfirmation.value = true
         }
 
-        ConfirmationDialog(
-            displayDialog = showDeleteConfirmation,
-            onConfirmation = {
-                deleteNote(noteCreationDate)
-                isDeleted = true
-                navigateUp()
-            },
-            message = stringResource(R.string.confirmation_message_delete_note)
-        )
-        ConfirmationDialog(
-            displayDialog = showCancelConfirmation,
-            onConfirmation = {
-                if (isNew) {
-                    // The note is not kept and must be deleted
-                    deleteNote(noteCreationDate)
-                    isDeleted = true
-                }
-                navigateUp()
-            },
-            message = stringResource(R.string.confirmation_message_cancel_changes)
+        val textFieldColors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
         )
 
         Scaffold(
             topBar = {
                 AppBar(
+                    titleProvider = { title },
+                    textFieldColors = textFieldColors,
                     onDelete = showDeleteConfirmationDialog,
                     onSave = saveAndPopBackStack,
                     onBack = cancelNoteChanges,
-                    title = title,
-                    isTitleModified = isModified,
+                    onModification = {
+                        title = it
+                        isModified = true
+                    },
                 )
             },
         ) { paddingValues ->
-            Column(
-                Modifier
+            MainContent(
+                appState = appState,
+                note = note,
+                textFieldColors = textFieldColors,
+                modifier = Modifier
                     .padding(paddingValues)
-                    .fillMaxWidth(),
-            ) {
-                val index = rememberSaveable { mutableStateOf(0) }
-
-                val editingVisibilityState = remember { MutableTransitionState(index.value == 0) }
-                val associationVisibilityState =
-                    remember { MutableTransitionState(index.value == 1) }
-
-                val swipeDuration = 300
-                val swipeInLeftTransition =
-                    slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
-                val swipeInRightTransition =
-                    slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
-                val swipeOutLeftTransition =
-                    slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
-                val swipeOutRightTransition =
-                    slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
-
-                Tab(
-                    index = index,
-                    editingVisibilityState = editingVisibilityState,
-                    associationVisibilityState = associationVisibilityState,
-                    swipeDuration = swipeDuration,
-                    modifier = Modifier.padding(Values.smallPadding, 0.dp),
-                )
-
-                Box {
-                    this@Column.AnimatedVisibility(
-                        visibleState = editingVisibilityState,
-                        enter = swipeInRightTransition,
-                        exit = swipeOutLeftTransition,
-                    ) {
-                        val colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            disabledContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        )
-
-                        TextField(
-                            value = content.value,
-                            onValueChange = {
-                                content.value = it
-                                isModified.value = true
-                            },
-                            colors = colors,
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-
-                    this@Column.AnimatedVisibility(
-                        visibleState = associationVisibilityState,
-                        enter = swipeInLeftTransition,
-                        exit = swipeOutRightTransition,
-                    ) {
-                        val associatedNotes: MutableList<NoteAssociationItemUiState> =
-                            mutableListOf()
-
-                        appState.value.noteAssociations.forEach {
-                            if (it.parentCreationDate == note.creationDate) {
-                                associatedNotes += it
-                            }
-                        }
-
-                        AssociatedNotes(
-                            parentCreationDate = noteCreationDate,
-                            associatedNotes = associatedNotes,
-                            notes = appState.value.allNotes,
-                            createNote = createNote,
-                            navigateToNote = navigateToNote,
-                            modifier = Modifier.padding(Values.smallPadding),
-                        )
-                    }
-                }
-            }
+                    .then(maxWidthModifier),
+                contentProvider = { content },
+                onContentChanges = {
+                    content = it
+                    isModified = true
+                },
+                navigateToNote = navigateToNote,
+                createNote = createNote,
+            )
         }
     }
 }
 
 @Composable
-private fun TabIndicator(
+private fun MainContent(
+    appState: State<NoteAppUiState>,
+    note: NoteItemUiState,
     modifier: Modifier = Modifier,
+    textFieldColors: TextFieldColors = TextFieldDefaults.colors(),
+    contentProvider: () -> String = { "" },
+    onContentChanges: (String) -> Unit = {},
+    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
+    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
 ) {
-    Box(modifier) {
+    Column(modifier) {
+        var tabIndex by rememberSaveable { mutableStateOf(0) }
+
+        var editingVisibilityState by remember { mutableStateOf(tabIndex == 0) }
+        var associationVisibilityState by remember { mutableStateOf(tabIndex == 1) }
+
+        Tab(
+            indexProvider = { tabIndex },
+            onEditClicked = {
+                tabIndex = 0
+                editingVisibilityState = true
+                associationVisibilityState = false
+            },
+            onAssociationClicked = {
+                tabIndex = 1
+                editingVisibilityState = false
+                associationVisibilityState = true
+            },
+            modifier = Modifier.padding(Values.smallPadding, 0.dp),
+        )
+
+        Box {
+            ContentEditing(
+                isVisible = { editingVisibilityState },
+                contentProvider = contentProvider,
+                onContentChanges = onContentChanges,
+                textFieldColors = textFieldColors,
+            )
+
+            AssociatedNotes(
+                appState = appState,
+                note = note,
+                isVisible = { associationVisibilityState },
+                createNote = createNote,
+                navigateToNote = navigateToNote,
+            )
+        }
+    }
+}
+
+@Composable
+private fun Tab(
+    modifier: Modifier = Modifier,
+    onEditClicked: () -> Unit = {},
+    onAssociationClicked: () -> Unit = {},
+    indexProvider: () -> Int = { 0 },
+) {
+    val index = indexProvider()
+
+    TabRow(
+        selectedTabIndex = index,
+        modifier = modifier,
+        indicator = { TabIndicator(index = index, tabPositions = it) },
+    ) {
+        Tab(
+            selected = index == 0,
+            onClick = onEditClicked,
+            text = { Text(stringResource(R.string.tab_edit)) },
+        )
+        Tab(
+            selected = index == 1,
+            onClick = onAssociationClicked,
+            text = { Text(stringResource(R.string.tab_associated_notes)) },
+        )
+    }
+}
+
+@Composable
+private fun TabIndicator(
+    index: Int,
+    tabPositions: List<TabPosition>
+) {
+    val transition = updateTransition(targetState = index, label = "tabSwitch")
+    val indicatorStart by transition.animateDp(
+        transitionSpec = { Values.Animation.emphasized(swipeDuration) },
+        label = "tabSwitchStart",
+    ) {
+        tabPositions[it].left
+    }
+    val indicatorEnd by transition.animateDp(
+        transitionSpec = { Values.Animation.emphasized(swipeDuration) },
+        label = "tabSwitchEnd",
+    ) {
+        tabPositions[it].right
+    }
+
+    Box(
+        Modifier
+            .wrapContentSize(Alignment.BottomStart)
+            .offset {
+                IntOffset(indicatorStart.roundToPx(), 0)
+            }
+            .width(indicatorEnd - indicatorStart)
+    ) {
         Surface(
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = maxWidthModifier
                 .height(2.dp),
             content = {},
         )
@@ -224,97 +274,76 @@ private fun TabIndicator(
 }
 
 @Composable
-private fun Tab(
-    index: MutableState<Int>,
-    editingVisibilityState: MutableTransitionState<Boolean>,
-    associationVisibilityState: MutableTransitionState<Boolean>,
-    @Suppress("SameParameterValue") swipeDuration: Int,
-    modifier: Modifier = Modifier,
+private fun ContentEditing(
+    isVisible: () -> Boolean,
+    contentProvider: () -> String = { "" },
+    onContentChanges: (String) -> Unit = {},
+    textFieldColors: TextFieldColors = TextFieldDefaults.colors(),
 ) {
-
-    TabRow(
-        selectedTabIndex = index.value,
-        modifier = modifier,
-        indicator = { tabPositions ->
-            val transition = updateTransition(index.value, label = "tabSwitch")
-            val indicatorStart by transition.animateDp(
-                { Values.Animation.emphasized(swipeDuration) }, label = "tabSwitchStart"
-            ) {
-                tabPositions[it].left
-            }
-
-            val indicatorEnd by transition.animateDp(
-                { Values.Animation.emphasized(swipeDuration) }, label = "tabSwitchEnd"
-            ) {
-                tabPositions[it].right
-            }
-
-            TabIndicator(
-                Modifier
-                    .wrapContentSize(align = Alignment.BottomStart)
-                    .offset(x = indicatorStart)
-                    .width(indicatorEnd - indicatorStart),
-            )
-        }
+    AnimatedVisibility(
+        visible = isVisible(),
+        enter = swipeInRightTransition,
+        exit = swipeOutLeftTransition,
     ) {
-        Tab(
-            selected = index.value == 0,
-            onClick = {
-                index.value = 0
-                editingVisibilityState.targetState = true
-                associationVisibilityState.targetState = false
-            },
-            text = { Text(stringResource(R.string.tab_edit)) },
-        )
-        Tab(
-            selected = index.value == 1,
-            onClick = {
-                index.value = 1
-                editingVisibilityState.targetState = false
-                associationVisibilityState.targetState = true
-            },
-            text = { Text(stringResource(R.string.tab_associated_notes)) },
+        TextField(
+            value = contentProvider(),
+            onValueChange = onContentChanges,
+            colors = textFieldColors,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = maxSizeModifier,
         )
     }
 }
 
 @Composable
 private fun AssociatedNotes(
-    parentCreationDate: Date,
-    associatedNotes: List<NoteAssociationItemUiState>,
-    notes: List<NoteItemUiState>,
-    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
-    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit,
-    modifier: Modifier = Modifier,
+    appState: State<NoteAppUiState>,
+    note: NoteItemUiState,
+    isVisible: () -> Boolean,
+    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
+    navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
 ) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
-        modifier = modifier,
+    AnimatedVisibility(
+        visible = isVisible(),
+        enter = swipeInLeftTransition,
+        exit = swipeOutRightTransition,
     ) {
-        item(0) {
-            Button(
-                onClick = {
-                    // Create and edit the new note
-                    createNote(parentCreationDate) { newNoteCreationDate ->
-                        navigateToNote(newNoteCreationDate, true)
-                    }
-                },
-                shape = ShapeDefaults.Small,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.associate_new_note))
+        val associatedNotes: MutableList<NoteAssociationItemUiState> =
+            mutableListOf()
+
+        appState.value.noteAssociations.forEach {
+            if (it.parentCreationDate == note.creationDate) {
+                associatedNotes += it
             }
         }
-        for (associatedNote in associatedNotes) {
-            notes.find(associatedNote.childCreationDate)?.let { note ->
-                item(associatedNote.childCreationDate.hashCode()) {
-                    AssociatedNoteElement(
-                        text = note.title,
-                        onClick = {
-                            navigateToNote(note.creationDate, false)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
+            modifier = paddingModifier,
+        ) {
+            item(0) {
+                Button(
+                    onClick = {
+                        // Create and edit the new note
+                        createNote(note.creationDate) { newNoteCreationDate ->
+                            navigateToNote(newNoteCreationDate, true)
+                        }
+                    },
+                    shape = ShapeDefaults.Small,
+                    modifier = maxWidthModifier,
+                ) {
+                    Text(stringResource(R.string.associate_new_note))
+                }
+            }
+            for (associatedNote in associatedNotes) {
+                appState.value.allNotes.find(associatedNote.childCreationDate)?.let { note ->
+                    item(associatedNote.childCreationDate.hashCode()) {
+                        AssociatedNoteElement(
+                            text = note.title,
+                            onClick = {
+                                navigateToNote(note.creationDate, false)
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -324,8 +353,7 @@ private fun AssociatedNotes(
 @Composable
 private fun AssociatedNoteElement(
     text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     var surfaceWidth by remember { mutableStateOf(0.dp) }
@@ -334,50 +362,48 @@ private fun AssociatedNoteElement(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
-        modifier = modifier.onGloballyPositioned {
+        modifier = maxWidthModifier.onGloballyPositioned {
             surfaceWidth = with(density) { it.size.width.toDp() }
         },
     ) {
-        Row(modifier = Modifier.clickable { onClick() }) {
+        Row(modifier = Modifier.clickable(onClick = onClick)) {
             Text(
                 text = text.ifBlank { stringResource(R.string.no_title) },
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = Values.normalFontSize,
                 maxLines = 2,
-                modifier = Modifier.padding(Values.smallPadding),
+                modifier = paddingModifier,
             )
         }
     }
 }
 
+/**
+ * The app bar for the note editing screen.
+ *
+ * @param titleProvider Provides the title of the note.
+ * @param onDelete Called when the delete button is pressed.
+ * @param onSave Called when the save button is pressed.
+ * @param onBack Called when the back button is pressed.
+ * @param onModification Called when the title is modified. It takes the new title as a parameter.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar(
-    onDelete: () -> Unit,
-    onSave: () -> Unit,
-    onBack: () -> Unit,
-    title: MutableState<String>,
-    isTitleModified: MutableState<Boolean>,
-    modifier: Modifier = Modifier,
+    titleProvider: () -> String,
+    textFieldColors: TextFieldColors = TextFieldDefaults.colors(),
+    onDelete: () -> Unit = {},
+    onSave: () -> Unit = {},
+    onBack: () -> Unit = {},
+    onModification: (String) -> Unit = {},
 ) {
     TopAppBar(
         title = {
-            val colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            )
-
             TextField(
-                value = title.value,
-                onValueChange = {
-                    title.value = it
-                    isTitleModified.value = true
-                },
+                value = titleProvider(),
+                onValueChange = onModification,
                 singleLine = true,
-                colors = colors,
+                colors = textFieldColors,
                 placeholder = {
                     Text(stringResource(R.string.no_title), fontSize = 24.sp)
                 },
@@ -397,6 +423,22 @@ private fun AppBar(
                 Icon(Icons.Filled.ArrowBack, stringResource(R.string.cancel_changes))
             }
         },
-        modifier = modifier,
     )
 }
+
+private val paddingModifier = Modifier
+    .padding(Values.smallPadding)
+
+private val maxSizeModifier = Modifier.fillMaxSize()
+
+private val maxWidthModifier = Modifier.fillMaxWidth()
+
+private const val swipeDuration = 300
+private val swipeInLeftTransition =
+    slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
+private val swipeInRightTransition =
+    slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
+private val swipeOutLeftTransition =
+    slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
+private val swipeOutRightTransition =
+    slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }

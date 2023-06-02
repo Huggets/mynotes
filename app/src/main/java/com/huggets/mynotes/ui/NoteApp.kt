@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalAnimationApi::class)
-
 package com.huggets.mynotes.ui
 
 import android.os.Bundle
@@ -61,27 +59,36 @@ private val exitScreenToLeftTransition =
             slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
                 -(it * slideOffset).toInt()
             })
+
+@OptIn(ExperimentalAnimationApi::class)
 private val enterNewNoteCenterTransition =
     (scaleIn(
         transformOrigin = TransformOrigin(0.5f, 1f),
         animationSpec = enterScreenFloatSpec,
     ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
 private val enterNewNoteRightTransition =
     (scaleIn(
         transformOrigin = TransformOrigin(1f, 1f),
         animationSpec = enterScreenFloatSpec,
     ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
 private val exitNewNoteCenterTransition =
     (scaleOut(
         transformOrigin = TransformOrigin(0.5f, 1f),
         animationSpec = exitScreenPermanentlyFloatSpec,
     ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
 private val exitNewNoteRightTransition =
     (scaleOut(
         transformOrigin = TransformOrigin(1f, 1f),
         animationSpec = exitScreenPermanentlyFloatSpec,
     ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) })
 
+@OptIn(ExperimentalAnimationApi::class)
 private val enterViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
     {
         if (isNewNote(initialState)) {
@@ -90,6 +97,8 @@ private val enterViewListTransition: AnimatedContentScope<NavBackStackEntry>.() 
             enterScreenFromLeftTransition
         }
     }
+
+@OptIn(ExperimentalAnimationApi::class)
 private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
     {
         if (isNewNote(targetState)) {
@@ -99,6 +108,7 @@ private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -
         }
     }
 
+@OptIn(ExperimentalAnimationApi::class)
 private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? {
     return {
         if (
@@ -116,11 +126,15 @@ private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): Animat
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 private val exitEditNoteTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
     { exitScreenToLeftTransition }
+
+@OptIn(ExperimentalAnimationApi::class)
 private val enterEditNotePopTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
     { enterScreenFromLeftTransition }
 
+@OptIn(ExperimentalAnimationApi::class)
 private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? {
     return {
         if (
@@ -138,9 +152,11 @@ private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): Animate
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 private val enterDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
     { enterScreenFromRightTransition }
 
+@OptIn(ExperimentalAnimationApi::class)
 private val exitDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
     { exitScreenToRightTransition }
 
@@ -203,8 +219,6 @@ fun NoteApp(
         navigationController.navigate(Destinations.generateEditNote(creationDate, isNew))
     }
 
-    noteViewModel.syncUiState()
-
     val enterEditNoteTransition = remember { makeEnterEditNoteTransition(fabPosition) }
     val exitEditNotePopTransition = remember { makeExitEditNoteTransition(fabPosition) }
 
@@ -220,17 +234,17 @@ fun NoteApp(
                     exitTransition = exitViewListTransition,
                 ) {
                     NoteListActivity(
-                        quitApplication,
-                        navigateUpWithReturnValue,
-                        navigateToNote,
-                        appState,
-                        fabPosition,
-                        deleteNotes,
-                        createNote,
-                        exportToXml,
-                        importFromXml,
-                        startSyncDataWithAnotherDevice,
-                        snackbarHostState,
+                        appState = appState,
+                        snackbarHostState = snackbarHostState,
+                        fabPosition = fabPosition,
+                        quitApplication = quitApplication,
+                        navigateUp = navigateUpWithReturnValue,
+                        navigateToNote = navigateToNote,
+                        createNote = createNote,
+                        deleteNotes = deleteNotes,
+                        exportToXml = exportToXml,
+                        importFromXml = importFromXml,
+                        startSyncDataWithAnotherDevice = startSyncDataWithAnotherDevice,
                     )
                 }
                 composable(
@@ -241,14 +255,14 @@ fun NoteApp(
                     popEnterTransition = enterEditNotePopTransition,
                 ) { backStackEntry ->
                     NoteEditingActivity(
-                        appState,
-                        getCreationDate(backStackEntry.arguments!!),
-                        createNote,
-                        updateNote,
-                        deleteNote,
-                        navigateUp,
-                        navigateToNote,
-                        false,
+                        appState = appState,
+                        noteCreationDate = getCreationDate(backStackEntry.arguments!!),
+                        isNew = false,
+                        navigateUp = navigateUp,
+                        navigateToNote = navigateToNote,
+                        createNote = createNote,
+                        saveNote = updateNote,
+                        deleteNote = deleteNote,
                     )
                 }
                 composable(
@@ -259,14 +273,14 @@ fun NoteApp(
                     popEnterTransition = enterEditNotePopTransition,
                 ) { backStackEntry ->
                     NoteEditingActivity(
-                        appState,
-                        getCreationDate(backStackEntry.arguments!!),
-                        createNote,
-                        updateNote,
-                        deleteNote,
-                        navigateUp,
-                        navigateToNote,
-                        true,
+                        appState = appState,
+                        noteCreationDate = getCreationDate(backStackEntry.arguments!!),
+                        isNew = true,
+                        navigateUp = navigateUp,
+                        navigateToNote = navigateToNote,
+                        createNote = createNote,
+                        saveNote = updateNote,
+                        deleteNote = deleteNote,
                     )
                 }
                 composable(
@@ -276,10 +290,10 @@ fun NoteApp(
                     popExitTransition = exitDataSyncingTransition,
                 ) {
                     DataSyncingActivity(
-                        appState,
-                        syncWithBluetoothDevice,
-                        cancelSync,
-                        navigateUp,
+                        appState = appState,
+                        navigateUp = navigateUp,
+                        cancelSync = cancelSync,
+                        syncWithDevice = syncWithBluetoothDevice,
                     )
                 }
             }

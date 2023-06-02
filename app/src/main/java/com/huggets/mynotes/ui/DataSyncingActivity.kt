@@ -31,125 +31,122 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huggets.mynotes.R
 import com.huggets.mynotes.ui.state.NoteAppUiState
 
 @Composable
 fun DataSyncingActivity(
     appState: State<NoteAppUiState>,
-    syncWithDevice: (deviceAddress: String) -> Unit,
-    cancelSync: () -> Unit,
-    navigateUp: () -> Unit,
-    modifier: Modifier = Modifier,
+    navigateUp: () -> Unit = {},
+    cancelSync: () -> Unit = {},
+    syncWithDevice: (deviceAddress: String) -> Unit = {},
 ) {
     val showCancelDialog = rememberSaveable { mutableStateOf(false) }
     var navigateUpWhenCancelling by rememberSaveable { mutableStateOf(false) }
 
-    val onCancelDialogDismiss = {
-        navigateUpWhenCancelling = false
-    }
-    val cancel = {
-        cancelSync()
-
-        if (navigateUpWhenCancelling) {
-            navigateUp()
-        }
-    }
-    val cancelAndNavigateUp = {
-        if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
-            navigateUpWhenCancelling = true
-            showCancelDialog.value = true
-        } else {
-            navigateUp()
-        }
-    }
-
-    val onBackPress = {
+    BackPressHandler {
         if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
             showCancelDialog.value = true
         } else {
             navigateUp()
         }
     }
-    BackPressHandler(onBackPress)
 
     ConfirmationDialog(
         displayDialog = showCancelDialog,
-        onConfirmation = cancel,
         message = stringResource(R.string.confirmation_message_cancel_synchronization),
-        onDismiss = onCancelDialogDismiss,
+        onConfirm = {
+            cancelSync()
+
+            if (navigateUpWhenCancelling) {
+                navigateUp()
+            }
+        },
+        onDismiss = { navigateUpWhenCancelling = false },
     )
 
     Scaffold(
-        modifier = modifier,
-        topBar = { AppBar(cancelAndNavigateUp) },
-    ) {
-        Box(
-            Modifier
-                .padding(it)
-                .padding(Values.smallPadding)
-                .fillMaxSize()
-        ) {
-            val center = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-
-            if (!appState.value.dataSyncingUiState.bluetoothSupported) {
-                val message = stringResource(R.string.bluetooth_not_supported)
-                Text(
-                    text = message,
-                    modifier = center,
-                    textAlign = TextAlign.Center,
-                )
-            } else if (!appState.value.dataSyncingUiState.bluetoothPermissionGranted) {
-                Text(
-                    text = stringResource(R.string.error_bluetooth_permission_not_granted),
-                    modifier = center,
-                    textAlign = TextAlign.Center,
-                )
-            } else if (!appState.value.dataSyncingUiState.bluetoothEnabled) {
-                Text(
-                    text = stringResource(R.string.error_bluetooth_disabled),
-                    modifier = center,
-                    textAlign = TextAlign.Center,
-                )
-            } else if (appState.value.dataSyncingUiState.connecting) {
-                SyncingIndicator()
-            } else if (appState.value.dataSyncingUiState.connected) {
-                Text(
-                    text = stringResource(R.string.synchronizing_notes),
-                    modifier = center,
-                    textAlign = TextAlign.Center,
-                )
-            } else {
-                Column {
-                    if (appState.value.dataSyncingUiState.synchronisationError) {
-                        Text(
-                            text = stringResource(R.string.synchronization_error),
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .padding(0.dp, Values.smallPadding)
-                                .fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
+        topBar = {
+            AppBar(
+                onCancel = {
+                    if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
+                        navigateUpWhenCancelling = true
+                        showCancelDialog.value = true
+                    } else {
+                        navigateUp()
                     }
-
-                    BluetoothDevices(appState, syncWithDevice)
                 }
+            )
+        },
+    ) {
+        MainContent(
+            appState = appState,
+            modifier = Modifier.padding(it).then(Values.Modifier.paddingMaxSize),
+            syncWithDevice = syncWithDevice,
+        )
+    }
+}
+
+@Composable
+private fun MainContent(
+    appState: State<NoteAppUiState>,
+    modifier: Modifier = Modifier,
+    syncWithDevice: (deviceAddress: String) -> Unit = {},
+) {
+    Box(modifier) {
+        val center = Modifier
+            .align(Alignment.Center)
+            .fillMaxWidth()
+
+        if (!appState.value.dataSyncingUiState.bluetoothSupported) {
+            Text(
+                text = stringResource(R.string.bluetooth_not_supported),
+                modifier = center,
+                textAlign = TextAlign.Center,
+            )
+        } else if (!appState.value.dataSyncingUiState.bluetoothPermissionGranted) {
+            Text(
+                text = stringResource(R.string.error_bluetooth_permission_not_granted),
+                modifier = center,
+                textAlign = TextAlign.Center,
+            )
+        } else if (!appState.value.dataSyncingUiState.bluetoothEnabled) {
+            Text(
+                text = stringResource(R.string.error_bluetooth_disabled),
+                modifier = center,
+                textAlign = TextAlign.Center,
+            )
+        } else if (appState.value.dataSyncingUiState.connecting) {
+            ProgressIndicator()
+        } else if (appState.value.dataSyncingUiState.connected) {
+            Text(
+                text = stringResource(R.string.synchronizing_notes),
+                modifier = center,
+                textAlign = TextAlign.Center,
+            )
+        } else {
+            Column {
+                if (appState.value.dataSyncingUiState.synchronisationError) {
+                    Text(
+                        text = stringResource(R.string.synchronization_error),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(0.dp, Values.smallPadding)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                BluetoothDevices(appState, syncWithDevice)
             }
         }
     }
 }
 
 @Composable
-private fun SyncingIndicator(
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-    ) {
+private fun ProgressIndicator() {
+    Box(Values.Modifier.maxSize) {
         CircularProgressIndicator(Modifier.align(Alignment.Center))
     }
 }
@@ -158,10 +155,8 @@ private fun SyncingIndicator(
 @Composable
 private fun AppBar(
     onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     TopAppBar(
-        modifier = modifier,
         title = { Text(stringResource(R.string.data_syncing_activity_name)) },
         navigationIcon = {
             IconButton(onClick = { onCancel() }) {
@@ -175,18 +170,14 @@ private fun AppBar(
 private fun BluetoothDevices(
     appState: State<NoteAppUiState>,
     syncWithDevice: (deviceAddress: String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
-        modifier = modifier,
     ) {
         item(0) {
             Text(
                 text = stringResource(R.string.paired_devices_information),
-                modifier = Modifier
-                    .padding(0.dp, Values.smallPadding)
-                    .fillMaxWidth(),
+                modifier = Values.Modifier.maxWidth.padding(0.dp, Values.smallPadding),
                 textAlign = TextAlign.Center,
             )
         }
@@ -204,10 +195,11 @@ private fun BluetoothDevices(
             }
         } else {
             appState.value.dataSyncingUiState.bondedDevices.forEach { device ->
-                val syncWithClickedDevice = { syncWithDevice(device.key) }
-
                 item(device.key) {
-                    Device(device.value, syncWithClickedDevice)
+                    Device(
+                        name = device.value,
+                        onClick = { syncWithDevice(device.key) }
+                    )
                 }
             }
         }
@@ -217,19 +209,18 @@ private fun BluetoothDevices(
 @Composable
 private fun Device(
     name: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     Button(
         onClick = onClick,
         shape = ShapeDefaults.Small,
-        modifier = modifier.fillMaxWidth(),
+        modifier = Values.Modifier.maxWidth,
     ) {
         Text(
             text = name,
-            fontSize = 16.sp,
+            fontSize = Values.normalFontSize,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(Values.smallPadding),
+            modifier = Values.Modifier.smallPadding,
         )
     }
 }

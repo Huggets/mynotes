@@ -192,6 +192,8 @@ class MainActivity : ComponentActivity() {
 
         val quitApplication: () -> Unit = { finish() }
 
+        noteViewModel.syncUiState()
+
         setContent {
             val exportToXml: () -> Unit = {
                 val calendar = Calendar.getInstance()
