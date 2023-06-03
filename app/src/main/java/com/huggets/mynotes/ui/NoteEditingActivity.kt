@@ -41,7 +41,7 @@ fun NoteEditingActivity(
     navigateUp: () -> Unit,
     navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit,
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit,
-    saveNote: (NoteItemUiState) -> Unit,
+    saveNote: (note: NoteItemUiState, onNoteUpdated: () -> Unit) -> Unit,
     deleteNote: (noteCreationDate: Date) -> Unit,
 ) {
     var isDeleted by rememberSaveable { mutableStateOf(false) }
@@ -107,11 +107,9 @@ fun NoteEditingActivity(
                     note.creationDate,
                     Date.getCurrentTime(),
                 )
-            )
-        }
-        val saveAndPopBackStack: () -> Unit = {
-            saveChanges()
-            navigateUp()
+            ) {
+                isModified = false
+            }
         }
         val showDeleteConfirmationDialog: () -> Unit = {
             showDeleteConfirmation.value = true
@@ -129,9 +127,10 @@ fun NoteEditingActivity(
             topBar = {
                 AppBar(
                     titleProvider = { title },
+                    saveIconVisibleStateProvider = { isModified },
                     textFieldColors = textFieldColors,
                     onDelete = showDeleteConfirmationDialog,
-                    onSave = saveAndPopBackStack,
+                    onSave = saveChanges,
                     onBack = cancelNoteChanges,
                     onModification = {
                         title = it
@@ -391,6 +390,7 @@ private fun AssociatedNoteElement(
 @Composable
 private fun AppBar(
     titleProvider: () -> String,
+    saveIconVisibleStateProvider: () -> Boolean,
     textFieldColors: TextFieldColors = TextFieldDefaults.colors(),
     onDelete: () -> Unit = {},
     onSave: () -> Unit = {},
@@ -414,7 +414,10 @@ private fun AppBar(
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, stringResource(R.string.delete_note))
             }
-            IconButton(onClick = onSave) {
+            AnimatedIconButton(
+                visibleStateProvider = saveIconVisibleStateProvider,
+                onClick = onSave,
+            ) {
                 Icon(Icons.Filled.Done, stringResource(R.string.save_note))
             }
         },

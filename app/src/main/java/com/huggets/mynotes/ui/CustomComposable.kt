@@ -4,12 +4,15 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -20,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.huggets.mynotes.R
 
-// TODO Try to not use a MutableState for the dialog and use a callback instead.
 /**
  * When displayDialog is true, show a Dialog that ask for a confirmation.
  *
@@ -121,5 +123,20 @@ fun AnimatedFab(
                 text = { Text(text) },
             )
         }
+    }
+}
+
+@Composable
+fun AnimatedIconButton(
+    visibleStateProvider: () -> Boolean = { true },
+    onClick: () -> Unit = {},
+    icon: @Composable () -> Unit = {},
+) {
+    AnimatedVisibility(
+        visible = visibleStateProvider(),
+        enter = fadeIn(Values.emphasizedFloat),
+        exit = fadeOut(Values.emphasizedFloat),
+    ) {
+        IconButton(onClick = onClick, content = icon)
     }
 }

@@ -439,14 +439,11 @@ private fun AppBarActions(
     importFromXml: () -> Unit = {},
     synchronizeWithAnotherDevice: () -> Unit = {},
 ) {
-    AnimatedVisibility(
-        visible = isDeleteIconVisible(),
-        enter = fadeIn(Values.emphasizedFloat),
-        exit = fadeOut(Values.emphasizedFloat),
+    AnimatedIconButton(
+        visibleStateProvider = isDeleteIconVisible,
+        onClick = deleteSelectedNote,
     ) {
-        IconButton(onClick = deleteSelectedNote) {
-            Icon(Icons.Filled.Delete, stringResource(R.string.delete_selected_notes))
-        }
+        Icon(Icons.Filled.Delete, stringResource(R.string.delete_selected_notes))
     }
 
     DropdownMenu(

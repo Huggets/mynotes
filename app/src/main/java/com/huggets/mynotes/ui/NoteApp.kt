@@ -185,8 +185,8 @@ fun NoteApp(
         { parentCreationDate, onCreationDone ->
             noteViewModel.createNote(parentCreationDate, onCreationDone)
         }
-    val updateNote: (NoteItemUiState) -> Unit = { note ->
-        noteViewModel.updateNote(note)
+    val updateNote: (NoteItemUiState, () -> Unit) -> Unit = { note, onNoteUpdate ->
+        noteViewModel.updateNote(note, onNoteUpdate)
     }
     val deleteNote: (creationDate: Date) -> Unit = { creationDate ->
         noteViewModel.deleteNote(creationDate)

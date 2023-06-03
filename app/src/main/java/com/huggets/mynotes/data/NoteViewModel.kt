@@ -112,9 +112,10 @@ class NoteViewModel(
     /**
      * Update the given note in the database.
      */
-    fun updateNote(note: NoteItemUiState) {
+    fun updateNote(note: NoteItemUiState, onNoteUpdated: () -> Unit) {
         viewModelScope.launch {
             noteRepository.update(note.toNote())
+            onNoteUpdated()
         }
     }
 
