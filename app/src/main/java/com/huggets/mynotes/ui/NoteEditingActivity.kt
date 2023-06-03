@@ -408,6 +408,7 @@ private fun AppBar(
                     Text(stringResource(R.string.no_title), fontSize = 24.sp)
                 },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                modifier = Values.Modifier.maxWidth,
             )
         },
         actions = {
