@@ -1,10 +1,10 @@
 package com.huggets.mynotes.ui
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -29,6 +29,7 @@ import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
+import com.huggets.mynotes.ui.state.find
 
 // TODO : Add comments
 /**
@@ -294,16 +295,21 @@ private fun NotesList(
     ) {
         val allNotes = notes()
 
-        items(
-            items = notesToDisplay(),
-            key = { it.hashCode() },
-        ) {
-            NoteElement(
-                note = allNotes.find { note -> note.creationDate == it }!!,
-                isSelected = { isNoteSelected(it) },
-                onClick = onNoteClicked,
-                onLongClick = onNoteLongClicked,
-            )
+        notesToDisplay().forEach {
+            val note = allNotes.find(it)
+
+            if (note != null) {
+                item(it.hashCode()) {
+                    NoteElement(
+                        note = note,
+                        isSelected = { isNoteSelected(it) },
+                        onClick = onNoteClicked,
+                        onLongClick = onNoteLongClicked,
+                    )
+                }
+            } else {
+                Log.d("NotesList", "------------\nNOTE IS NULL\n------------")
+            }
         }
     }
 }
