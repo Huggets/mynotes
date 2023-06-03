@@ -34,8 +34,16 @@ import androidx.compose.ui.unit.dp
 import com.huggets.mynotes.R
 import com.huggets.mynotes.ui.state.NoteAppUiState
 
+/**
+ * The UI for the synchronization activity.
+ *
+ * @param appState The app state.
+ * @param navigateUp The lambda to call to navigate up.
+ * @param cancelSync The lambda to call to cancel the synchronization.
+ * @param syncWithDevice The lambda to call to synchronize data with a device.
+ */
 @Composable
-fun DataSyncingActivity(
+fun SynchronizationActivity(
     appState: State<NoteAppUiState>,
     navigateUp: () -> Unit = {},
     cancelSync: () -> Unit = {},
@@ -45,7 +53,7 @@ fun DataSyncingActivity(
     var navigateUpWhenCancelling by rememberSaveable { mutableStateOf(false) }
 
     BackPressHandler {
-        if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
+        if (appState.value.synchronizationState.connecting || appState.value.synchronizationState.connected) {
             showCancelDialog.value = true
         } else {
             navigateUp()
@@ -69,7 +77,7 @@ fun DataSyncingActivity(
         topBar = {
             AppBar(
                 onCancel = {
-                    if (appState.value.dataSyncingUiState.connecting || appState.value.dataSyncingUiState.connected) {
+                    if (appState.value.synchronizationState.connecting || appState.value.synchronizationState.connected) {
                         navigateUpWhenCancelling = true
                         showCancelDialog.value = true
                     } else {
@@ -81,12 +89,21 @@ fun DataSyncingActivity(
     ) {
         MainContent(
             appState = appState,
-            modifier = Modifier.padding(it).then(Values.Modifier.paddingMaxSize),
+            modifier = Modifier
+                .padding(it)
+                .then(Values.Modifier.paddingMaxSize),
             syncWithDevice = syncWithDevice,
         )
     }
 }
 
+/**
+ * The main content of the synchronization activity.
+ *
+ * @param appState The app state.
+ * @param modifier The modifier to apply to the content.
+ * @param syncWithDevice The lambda to call to synchronize data with a device.
+ */
 @Composable
 private fun MainContent(
     appState: State<NoteAppUiState>,
@@ -98,27 +115,27 @@ private fun MainContent(
             .align(Alignment.Center)
             .fillMaxWidth()
 
-        if (!appState.value.dataSyncingUiState.bluetoothSupported) {
+        if (!appState.value.synchronizationState.bluetoothSupported) {
             Text(
                 text = stringResource(R.string.bluetooth_not_supported),
                 modifier = center,
                 textAlign = TextAlign.Center,
             )
-        } else if (!appState.value.dataSyncingUiState.bluetoothPermissionGranted) {
+        } else if (!appState.value.synchronizationState.bluetoothPermissionGranted) {
             Text(
                 text = stringResource(R.string.error_bluetooth_permission_not_granted),
                 modifier = center,
                 textAlign = TextAlign.Center,
             )
-        } else if (!appState.value.dataSyncingUiState.bluetoothEnabled) {
+        } else if (!appState.value.synchronizationState.bluetoothEnabled) {
             Text(
                 text = stringResource(R.string.error_bluetooth_disabled),
                 modifier = center,
                 textAlign = TextAlign.Center,
             )
-        } else if (appState.value.dataSyncingUiState.connecting) {
+        } else if (appState.value.synchronizationState.connecting) {
             ProgressIndicator()
-        } else if (appState.value.dataSyncingUiState.connected) {
+        } else if (appState.value.synchronizationState.connected) {
             Text(
                 text = stringResource(R.string.synchronizing_notes),
                 modifier = center,
@@ -126,7 +143,7 @@ private fun MainContent(
             )
         } else {
             Column {
-                if (appState.value.dataSyncingUiState.synchronisationError) {
+                if (appState.value.synchronizationState.synchronisationError) {
                     Text(
                         text = stringResource(R.string.synchronization_error),
                         color = MaterialTheme.colorScheme.error,
@@ -144,6 +161,9 @@ private fun MainContent(
     }
 }
 
+/**
+ * A circular progress indicator
+ */
 @Composable
 private fun ProgressIndicator() {
     Box(Values.Modifier.maxSize) {
@@ -151,6 +171,11 @@ private fun ProgressIndicator() {
     }
 }
 
+/**
+ * The app bar of the synchronization activity.
+ *
+ * @param onCancel The lambda to call to cancel the synchronization.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar(
@@ -166,6 +191,12 @@ private fun AppBar(
     )
 }
 
+/**
+ * The list of Bluetooth devices.
+ *
+ * @param appState The app state.
+ * @param syncWithDevice The lambda to call to synchronize data with a device.
+ */
 @Composable
 private fun BluetoothDevices(
     appState: State<NoteAppUiState>,
@@ -181,7 +212,7 @@ private fun BluetoothDevices(
                 textAlign = TextAlign.Center,
             )
         }
-        if (appState.value.dataSyncingUiState.bondedDevices.isEmpty()) {
+        if (appState.value.synchronizationState.bondedDevices.isEmpty()) {
             item(1) {
                 Box(Modifier.fillMaxSize()) {
                     Text(
@@ -194,11 +225,11 @@ private fun BluetoothDevices(
                 }
             }
         } else {
-            appState.value.dataSyncingUiState.bondedDevices.forEach { device ->
+            appState.value.synchronizationState.bondedDevices.forEach { device ->
                 item(device.key) {
                     Device(
                         name = device.value,
-                        onClick = { syncWithDevice(device.key) }
+                        onClick = { syncWithDevice(device.key) },
                     )
                 }
             }
@@ -206,6 +237,12 @@ private fun BluetoothDevices(
     }
 }
 
+/**
+ * A single bluetooth device.
+ *
+ * @param name The name of the device.
+ * @param onClick The action to perform when the device is clicked.
+ */
 @Composable
 private fun Device(
     name: String,

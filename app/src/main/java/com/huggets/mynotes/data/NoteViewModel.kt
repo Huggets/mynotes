@@ -41,7 +41,7 @@ class NoteViewModel(
     init {
         val updateBluetoothState = {
             _uiState.value = _uiState.value.copy(
-                dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                synchronizationState = _uiState.value.synchronizationState.copy(
                     bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
                     bluetoothPermissionGranted = bluetoothConnectionManager.isBluetoothPermissionGranted(),
                 )
@@ -63,7 +63,7 @@ class NoteViewModel(
         }
 
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 bluetoothSupported = bluetoothConnectionManager.isBluetoothSupported(),
                 bluetoothPermissionGranted = bluetoothConnectionManager.isBluetoothPermissionGranted(),
                 bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
@@ -441,7 +441,7 @@ class NoteViewModel(
             }
         }
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 bondedDevices = bondedDevices
             )
         )
@@ -454,7 +454,7 @@ class NoteViewModel(
      */
     fun enableBluetooth() {
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 bluetoothEnabled = bluetoothConnectionManager.bluetoothEnabled,
                 synchronisationError = false,
                 synchronisationErrorMessage = "",
@@ -480,7 +480,7 @@ class NoteViewModel(
     fun cancelBluetoothConnection() {
         bluetoothConnectionManager.stopConnection()
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 connecting = false,
                 connected = false,
             )
@@ -498,7 +498,7 @@ class NoteViewModel(
         } ?: return
 
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 connecting = true,
                 synchronisationError = false,
                 synchronisationErrorMessage = "",
@@ -519,7 +519,7 @@ class NoteViewModel(
      */
     private fun onBluetoothConnectionEstablished() {
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 connecting = false,
                 connected = true,
             )
@@ -546,7 +546,7 @@ class NoteViewModel(
             val errorMessage = it?.message ?: resources.getString(R.string.no_message)
 
             _uiState.value = _uiState.value.copy(
-                dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+                synchronizationState = _uiState.value.synchronizationState.copy(
                     connected = false,
                     synchronisationError = error,
                     synchronisationErrorMessage = errorMessage,
@@ -562,7 +562,7 @@ class NoteViewModel(
      */
     private fun onBluetoothConnectionError(exception: Exception) {
         _uiState.value = _uiState.value.copy(
-            dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
+            synchronizationState = _uiState.value.synchronizationState.copy(
                 connecting = false,
                 connected = false,
                 synchronisationError = true,

@@ -29,7 +29,7 @@ import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
-import com.huggets.mynotes.ui.state.find
+import com.huggets.mynotes.ui.state.NoteItemUiState.Companion.find
 
 // TODO : Add comments
 /**
@@ -77,7 +77,7 @@ fun NoteListActivity(
         val snackbarHostState = remember { SnackbarHostState() }
 
         fabPosition.value =
-            if (maxWidth < Values.Limit.minWidthRequiredFabToLeft)
+            if (maxWidth < Values.minWidthRequiredFabToLeft)
                 FabPosition.Center
             else
                 FabPosition.End

@@ -31,8 +31,20 @@ import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
-import com.huggets.mynotes.ui.state.find
+import com.huggets.mynotes.ui.state.NoteItemUiState.Companion.find
 
+/**
+ * The UI for the note editing activity.
+ *
+ * @param appState The app state.
+ * @param noteCreationDate The creation date of the note to edit.
+ * @param isNew Whether the note is new or not.
+ * @param navigateUp The lambda to call to navigate up.
+ * @param navigateToNote The lambda to call to navigate to another note.
+ * @param createNote The lambda to call to create a new note.
+ * @param saveNote The lambda to call to save a note.
+ * @param deleteNote The lambda to call to delete a note.
+ */
 @Composable
 fun NoteEditingActivity(
     appState: State<NoteAppUiState>,
@@ -50,7 +62,7 @@ fun NoteEditingActivity(
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
-    val cancelNoteChanges = {
+    val cancelChangesAndNavigateUp = {
         if (isModified) {
             showCancelConfirmation.value = true
         } else {
@@ -64,7 +76,7 @@ fun NoteEditingActivity(
         }
     }
 
-    BackPressHandler(cancelNoteChanges)
+    BackPressHandler(cancelChangesAndNavigateUp)
 
     ConfirmationDialog(
         displayDialog = showDeleteConfirmation,
@@ -88,26 +100,22 @@ fun NoteEditingActivity(
         message = stringResource(R.string.confirmation_message_cancel_changes),
     )
 
-    // Note can be null if it was just created
+    // Note can be null if it was just created (the view model has not finished updating yet)
     val note = appState.value.allNotes.find(noteCreationDate)
 
     if (isDeleted || note == null) {
-        Box(maxSizeModifier) {
+        Box(Values.Modifier.maxSize) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
         }
     } else {
         var title by rememberSaveable { mutableStateOf(note.title) }
         var content by rememberSaveable { mutableStateOf(note.content) }
 
-        val saveChanges = {
-            saveNote(
-                NoteItemUiState(
-                    title,
-                    content,
-                    note.creationDate,
-                    Date.getCurrentTime(),
-                )
-            ) {
+        val saveChanges: () -> Unit = {
+            val now = Date.getCurrentTime()
+            val updatedNote = NoteItemUiState(title, content, note.creationDate, now)
+
+            saveNote(updatedNote) {
                 isModified = false
             }
         }
@@ -131,8 +139,8 @@ fun NoteEditingActivity(
                     textFieldColors = textFieldColors,
                     onDelete = showDeleteConfirmationDialog,
                     onSave = saveChanges,
-                    onBack = cancelNoteChanges,
-                    onModification = {
+                    onBack = cancelChangesAndNavigateUp,
+                    onTitleModified = {
                         title = it
                         isModified = true
                     },
@@ -145,7 +153,7 @@ fun NoteEditingActivity(
                 textFieldColors = textFieldColors,
                 modifier = Modifier
                     .padding(paddingValues)
-                    .then(maxWidthModifier),
+                    .then(Values.Modifier.maxWidth),
                 contentProvider = { content },
                 onContentChanges = {
                     content = it
@@ -158,6 +166,18 @@ fun NoteEditingActivity(
     }
 }
 
+/**
+ * The main content of the note editing activity.
+ *
+ * @param appState The app state.
+ * @param note The note to edit.
+ * @param modifier The modifier to apply to the content.
+ * @param textFieldColors The colors to use for the text fields.
+ * @param contentProvider The lambda to call to get the content of the note.
+ * @param onContentChanges The lambda to call when the content of the note changes.
+ * @param navigateToNote The lambda to call to navigate to another note.
+ * @param createNote The lambda to call to create a new note.
+ */
 @Composable
 private fun MainContent(
     appState: State<NoteAppUiState>,
@@ -175,7 +195,7 @@ private fun MainContent(
         var editingVisibilityState by remember { mutableStateOf(tabIndex == 0) }
         var associationVisibilityState by remember { mutableStateOf(tabIndex == 1) }
 
-        Tab(
+        Tabs(
             indexProvider = { tabIndex },
             onEditClicked = {
                 tabIndex = 0
@@ -191,8 +211,8 @@ private fun MainContent(
         )
 
         Box {
-            ContentEditing(
-                isVisible = { editingVisibilityState },
+            ContentEditor(
+                visibleStateProvider = { editingVisibilityState },
                 contentProvider = contentProvider,
                 onContentChanges = onContentChanges,
                 textFieldColors = textFieldColors,
@@ -201,7 +221,7 @@ private fun MainContent(
             AssociatedNotes(
                 appState = appState,
                 note = note,
-                isVisible = { associationVisibilityState },
+                visibleStateProvider = { associationVisibilityState },
                 createNote = createNote,
                 navigateToNote = navigateToNote,
             )
@@ -209,12 +229,20 @@ private fun MainContent(
     }
 }
 
+/**
+ * The tabs to switch between the note editing and the associated notes.
+ *
+ * @param indexProvider The lambda to call to get the index of the selected tab.
+ * @param modifier The modifier to apply to this layout.
+ * @param onEditClicked The lambda to call when the edit tab is clicked.
+ * @param onAssociationClicked The lambda to call when the associated notes tab is clicked.
+ */
 @Composable
-private fun Tab(
+private fun Tabs(
+    indexProvider: () -> Int,
     modifier: Modifier = Modifier,
     onEditClicked: () -> Unit = {},
     onAssociationClicked: () -> Unit = {},
-    indexProvider: () -> Int = { 0 },
 ) {
     val index = indexProvider()
 
@@ -236,6 +264,12 @@ private fun Tab(
     }
 }
 
+/**
+ * The indicator of the [Tabs].
+ *
+ * @param index The index of the selected tab.
+ * @param tabPositions The positions of the tabs.
+ */
 @Composable
 private fun TabIndicator(
     index: Int,
@@ -265,22 +299,31 @@ private fun TabIndicator(
     ) {
         Surface(
             color = MaterialTheme.colorScheme.primary,
-            modifier = maxWidthModifier
+            modifier = Values.Modifier.maxWidth
                 .height(2.dp),
             content = {},
         )
     }
 }
 
+/**
+ * The content editor.
+ *
+ * @param visibleStateProvider The lambda to call that returns whether the content editing is visible.
+ * @param contentProvider The lambda to call to get the content of the note.
+ * @param onContentChanges The lambda to call when the content of the note changes. It takes the new
+ * content as a parameter.
+ * @param textFieldColors The colors to use for the text field.
+ */
 @Composable
-private fun ContentEditing(
-    isVisible: () -> Boolean,
+private fun ContentEditor(
+    visibleStateProvider: () -> Boolean,
     contentProvider: () -> String = { "" },
     onContentChanges: (String) -> Unit = {},
     textFieldColors: TextFieldColors = TextFieldDefaults.colors(),
 ) {
     AnimatedVisibility(
-        visible = isVisible(),
+        visible = visibleStateProvider(),
         enter = swipeInRightTransition,
         exit = swipeOutLeftTransition,
     ) {
@@ -289,36 +332,49 @@ private fun ContentEditing(
             onValueChange = onContentChanges,
             colors = textFieldColors,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            modifier = maxSizeModifier,
+            modifier = Values.Modifier.maxSize,
         )
     }
 }
 
+/**
+ * A list of the notes associated to the current note with a button to associate a new note.
+ *
+ * @param appState The state of the app.
+ * @param note The parent note of the associated notes.
+ * @param visibleStateProvider The lambda to call that returns whether the associated notes are
+ * visible.
+ * @param createNote The lambda to call when the user wants to create a new note. It takes the
+ * parent creation date and a lambda to call when the creation is done as parameters.
+ * @param navigateToNote The lambda to call when the user wants to navigate to a note. It takes the
+ * creation date of the note and whether the note is new as parameters.
+ */
 @Composable
 private fun AssociatedNotes(
     appState: State<NoteAppUiState>,
     note: NoteItemUiState,
-    isVisible: () -> Boolean,
+    visibleStateProvider: () -> Boolean,
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
     navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
 ) {
     AnimatedVisibility(
-        visible = isVisible(),
+        visible = visibleStateProvider(),
         enter = swipeInLeftTransition,
         exit = swipeOutRightTransition,
     ) {
-        val associatedNotes: MutableList<NoteAssociationItemUiState> =
-            mutableListOf()
-
-        appState.value.noteAssociations.forEach {
-            if (it.parentCreationDate == note.creationDate) {
-                associatedNotes += it
-            }
-        }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Values.smallSpacing),
-            modifier = paddingModifier,
+            modifier = Values.Modifier.smallPadding,
         ) {
+            val associatedNotes: MutableList<NoteAssociationItemUiState> =
+                mutableListOf()
+
+            appState.value.noteAssociations.forEach {
+                if (it.parentCreationDate == note.creationDate) {
+                    associatedNotes += it
+                }
+            }
+
             item(0) {
                 Button(
                     onClick = {
@@ -328,7 +384,7 @@ private fun AssociatedNotes(
                         }
                     },
                     shape = ShapeDefaults.Small,
-                    modifier = maxWidthModifier,
+                    modifier = Values.Modifier.maxWidth,
                 ) {
                     Text(stringResource(R.string.associate_new_note))
                 }
@@ -337,7 +393,7 @@ private fun AssociatedNotes(
                 appState.value.allNotes.find(associatedNote.childCreationDate)?.let { note ->
                     item(associatedNote.childCreationDate.hashCode()) {
                         AssociatedNoteElement(
-                            text = note.title,
+                            title = note.title,
                             onClick = {
                                 navigateToNote(note.creationDate, false)
                             },
@@ -349,9 +405,15 @@ private fun AssociatedNotes(
     }
 }
 
+/**
+ * A single element of the associated notes list.
+ *
+ * @param title The title of the note.
+ * @param onClick The action to perform when the element is clicked.
+ */
 @Composable
 private fun AssociatedNoteElement(
-    text: String,
+    title: String,
     onClick: () -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -361,17 +423,17 @@ private fun AssociatedNoteElement(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shape = ShapeDefaults.Small,
-        modifier = maxWidthModifier.onGloballyPositioned {
+        modifier = Values.Modifier.maxWidth.onGloballyPositioned {
             surfaceWidth = with(density) { it.size.width.toDp() }
         },
     ) {
         Row(modifier = Modifier.clickable(onClick = onClick)) {
             Text(
-                text = text.ifBlank { stringResource(R.string.no_title) },
+                text = title.ifBlank { stringResource(R.string.no_title) },
                 fontWeight = FontWeight.Bold,
                 fontSize = Values.normalFontSize,
                 maxLines = 2,
-                modifier = paddingModifier,
+                modifier = Values.Modifier.smallPadding,
             )
         }
     }
@@ -384,7 +446,7 @@ private fun AssociatedNoteElement(
  * @param onDelete Called when the delete button is pressed.
  * @param onSave Called when the save button is pressed.
  * @param onBack Called when the back button is pressed.
- * @param onModification Called when the title is modified. It takes the new title as a parameter.
+ * @param onTitleModified Called when the title is modified. It takes the new title as a parameter.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -395,13 +457,13 @@ private fun AppBar(
     onDelete: () -> Unit = {},
     onSave: () -> Unit = {},
     onBack: () -> Unit = {},
-    onModification: (String) -> Unit = {},
+    onTitleModified: (String) -> Unit = {},
 ) {
     TopAppBar(
         title = {
             TextField(
                 value = titleProvider(),
-                onValueChange = onModification,
+                onValueChange = onTitleModified,
                 singleLine = true,
                 colors = textFieldColors,
                 placeholder = {
@@ -429,13 +491,6 @@ private fun AppBar(
         },
     )
 }
-
-private val paddingModifier = Modifier
-    .padding(Values.smallPadding)
-
-private val maxSizeModifier = Modifier.fillMaxSize()
-
-private val maxWidthModifier = Modifier.fillMaxWidth()
 
 private const val swipeDuration = 300
 private val swipeInLeftTransition =

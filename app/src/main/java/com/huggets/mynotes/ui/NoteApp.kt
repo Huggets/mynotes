@@ -26,154 +26,21 @@ import com.huggets.mynotes.ui.Values.Animation
 import com.huggets.mynotes.ui.Values.Animation.slideOffset
 import com.huggets.mynotes.ui.state.NoteItemUiState
 
-private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
-    override fun restore(value: Boolean): FabPosition {
-        return if (value) FabPosition.Center else FabPosition.End
-    }
-
-    override fun SaverScope.save(value: FabPosition): Boolean {
-        return value == FabPosition.Center
-    }
-}
-
-private val enterScreenIntOffsetSpec = Animation.emphasizedDecelerate<IntOffset>()
-private val enterScreenFloatSpec = tween<Float>(enterScreenIntOffsetSpec.durationMillis)
-private val exitScreenPermanentlyIntOffsetSpec = Animation.emphasizedAccelerate<IntOffset>()
-private val exitScreenPermanentlyFloatSpec =
-    tween<Float>(exitScreenPermanentlyIntOffsetSpec.durationMillis)
-
-private val enterScreenFromRightTransition =
-    (fadeIn(enterScreenFloatSpec) +
-            slideInHorizontally(enterScreenIntOffsetSpec) { (it * slideOffset).toInt() })
-private val enterScreenFromLeftTransition =
-    (fadeIn(enterScreenFloatSpec) +
-            slideInHorizontally(enterScreenIntOffsetSpec) { -(it * slideOffset).toInt() })
-private val exitScreenToRightTransition =
-    (fadeOut(exitScreenPermanentlyFloatSpec) +
-            slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
-                (it * slideOffset).toInt()
-            })
-private val exitScreenToLeftTransition =
-    (fadeOut(exitScreenPermanentlyFloatSpec) +
-            slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
-                -(it * slideOffset).toInt()
-            })
-
-@OptIn(ExperimentalAnimationApi::class)
-private val enterNewNoteCenterTransition =
-    (scaleIn(
-        transformOrigin = TransformOrigin(0.5f, 1f),
-        animationSpec = enterScreenFloatSpec,
-    ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) })
-
-@OptIn(ExperimentalAnimationApi::class)
-private val enterNewNoteRightTransition =
-    (scaleIn(
-        transformOrigin = TransformOrigin(1f, 1f),
-        animationSpec = enterScreenFloatSpec,
-    ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) })
-
-@OptIn(ExperimentalAnimationApi::class)
-private val exitNewNoteCenterTransition =
-    (scaleOut(
-        transformOrigin = TransformOrigin(0.5f, 1f),
-        animationSpec = exitScreenPermanentlyFloatSpec,
-    ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) })
-
-@OptIn(ExperimentalAnimationApi::class)
-private val exitNewNoteRightTransition =
-    (scaleOut(
-        transformOrigin = TransformOrigin(1f, 1f),
-        animationSpec = exitScreenPermanentlyFloatSpec,
-    ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) })
-
-@OptIn(ExperimentalAnimationApi::class)
-private val enterViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
-    {
-        if (isNewNote(initialState)) {
-            null
-        } else {
-            enterScreenFromLeftTransition
-        }
-    }
-
-@OptIn(ExperimentalAnimationApi::class)
-private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
-    {
-        if (isNewNote(targetState)) {
-            null
-        } else {
-            exitScreenToLeftTransition
-        }
-    }
-
-@OptIn(ExperimentalAnimationApi::class)
-private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? {
-    return {
-        if (
-            this.initialState.destination.route == Destinations.viewNoteListRoute &&
-            isNewNote(targetState)
-        ) {
-            if (fabPosition.value == FabPosition.Center) {
-                enterNewNoteCenterTransition
-            } else {
-                enterNewNoteRightTransition
-            }
-        } else {
-            enterScreenFromRightTransition
-        }
-    }
-}
-
-@OptIn(ExperimentalAnimationApi::class)
-private val exitEditNoteTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
-    { exitScreenToLeftTransition }
-
-@OptIn(ExperimentalAnimationApi::class)
-private val enterEditNotePopTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
-    { enterScreenFromLeftTransition }
-
-@OptIn(ExperimentalAnimationApi::class)
-private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? {
-    return {
-        if (
-            targetState.destination.route == Destinations.viewNoteListRoute &&
-            isNewNote(initialState)
-        ) {
-            if (fabPosition.value == FabPosition.Center) {
-                exitNewNoteCenterTransition
-            } else {
-                exitNewNoteRightTransition
-            }
-        } else {
-            exitScreenToRightTransition
-        }
-    }
-}
-
-@OptIn(ExperimentalAnimationApi::class)
-private val enterDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
-    { enterScreenFromRightTransition }
-
-@OptIn(ExperimentalAnimationApi::class)
-private val exitDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
-    { exitScreenToRightTransition }
-
-private fun getCreationDate(backStackEntryArgument: Bundle) = Date.fromString(
-    backStackEntryArgument.getString(Destinations.ParametersName.noteCreationDate)!!
-)
-
-private fun isNewNote(navBackStackEntry: NavBackStackEntry): Boolean {
-    return navBackStackEntry.destination.route == Destinations.newNoteRoute
-}
-
+/**
+ * The main entry point of the app.
+ *
+ * @param noteViewModel The [NoteViewModel] which provides the data and the logic of the app.
+ * @param quitApplication The callback to quit the app.
+ * @param export The callback to export the notes to a file.
+ * @param import The callback to import the notes from a file.
+ */
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NoteApp(
-    quitApplication: () -> Unit,
-    exportToXml: () -> Unit,
-    importFromXml: () -> Unit,
     noteViewModel: NoteViewModel,
+    quitApplication: () -> Unit,
+    export: () -> Unit,
+    import: () -> Unit,
 ) {
     val navigationController = rememberAnimatedNavController()
     val appState = noteViewModel.uiState.collectAsStateWithLifecycle()
@@ -239,11 +106,12 @@ fun NoteApp(
                         navigateToNote = navigateToNote,
                         createNote = createNote,
                         deleteNotes = deleteNotes,
-                        exportToXml = exportToXml,
-                        importFromXml = importFromXml,
+                        exportToXml = export,
+                        importFromXml = import,
                         startSyncDataWithAnotherDevice = startSyncDataWithAnotherDevice,
                     )
                 }
+
                 composable(
                     Destinations.editNoteRoute,
                     enterTransition = enterEditNoteTransition,
@@ -262,6 +130,7 @@ fun NoteApp(
                         deleteNote = deleteNote,
                     )
                 }
+
                 composable(
                     Destinations.newNoteRoute,
                     enterTransition = enterEditNoteTransition,
@@ -280,13 +149,14 @@ fun NoteApp(
                         deleteNote = deleteNote,
                     )
                 }
+
                 composable(
                     Destinations.dataSyncingRoute,
                     enterTransition = enterDataSyncingTransition,
                     exitTransition = exitDataSyncingTransition,
                     popExitTransition = exitDataSyncingTransition,
                 ) {
-                    DataSyncingActivity(
+                    SynchronizationActivity(
                         appState = appState,
                         navigateUp = navigateUp,
                         cancelSync = cancelSync,
@@ -296,4 +166,168 @@ fun NoteApp(
             }
         }
     }
+}
+
+/**
+ * A [Saver] which saves and restores the [FabPosition].
+ */
+private val fabPositionSaver = object : Saver<FabPosition, Boolean> {
+    override fun restore(value: Boolean): FabPosition {
+        return if (value) FabPosition.Center else FabPosition.End
+    }
+
+    override fun SaverScope.save(value: FabPosition): Boolean {
+        return value == FabPosition.Center
+    }
+}
+
+// Lists of transitions and transition specs used when navigating between screens.
+
+private val enterScreenIntOffsetSpec = Animation.emphasizedDecelerate<IntOffset>()
+
+private val enterScreenFloatSpec = tween<Float>(enterScreenIntOffsetSpec.durationMillis)
+
+private val exitScreenPermanentlyIntOffsetSpec = Animation.emphasizedAccelerate<IntOffset>()
+
+private val exitScreenPermanentlyFloatSpec =
+    tween<Float>(exitScreenPermanentlyIntOffsetSpec.durationMillis)
+
+private val enterScreenFromRightTransition =
+    (fadeIn(enterScreenFloatSpec) +
+            slideInHorizontally(enterScreenIntOffsetSpec) { (it * slideOffset).toInt() })
+
+private val enterScreenFromLeftTransition =
+    (fadeIn(enterScreenFloatSpec) +
+            slideInHorizontally(enterScreenIntOffsetSpec) { -(it * slideOffset).toInt() })
+
+private val exitScreenToRightTransition =
+    (fadeOut(exitScreenPermanentlyFloatSpec) +
+            slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
+                (it * slideOffset).toInt()
+            })
+
+private val exitScreenToLeftTransition =
+    (fadeOut(exitScreenPermanentlyFloatSpec) +
+            slideOutHorizontally(exitScreenPermanentlyIntOffsetSpec) {
+                -(it * slideOffset).toInt()
+            })
+
+@OptIn(ExperimentalAnimationApi::class)
+private val enterNewNoteCenterTransition =
+    (scaleIn(
+        transformOrigin = TransformOrigin(0.5f, 1f),
+        animationSpec = enterScreenFloatSpec,
+    ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
+private val enterNewNoteRightTransition =
+    (scaleIn(
+        transformOrigin = TransformOrigin(1f, 1f),
+        animationSpec = enterScreenFloatSpec,
+    ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
+private val exitNewNoteCenterTransition =
+    (scaleOut(
+        transformOrigin = TransformOrigin(0.5f, 1f),
+        animationSpec = exitScreenPermanentlyFloatSpec,
+    ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
+private val exitNewNoteRightTransition =
+    (scaleOut(
+        transformOrigin = TransformOrigin(1f, 1f),
+        animationSpec = exitScreenPermanentlyFloatSpec,
+    ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) })
+
+@OptIn(ExperimentalAnimationApi::class)
+private val enterViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+    {
+        if (isNewNote(initialState)) {
+            null
+        } else {
+            enterScreenFromLeftTransition
+        }
+    }
+
+@OptIn(ExperimentalAnimationApi::class)
+private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+    {
+        if (isNewNote(targetState)) {
+            null
+        } else {
+            exitScreenToLeftTransition
+        }
+    }
+
+/**
+ * Generates an [EnterTransition] for the [NoteEditingActivity] based on the [FabPosition].
+ */
+@OptIn(ExperimentalAnimationApi::class)
+private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? {
+    return {
+        if (
+            this.initialState.destination.route == Destinations.viewNoteListRoute &&
+            isNewNote(targetState)
+        ) {
+            if (fabPosition.value == FabPosition.Center) {
+                enterNewNoteCenterTransition
+            } else {
+                enterNewNoteRightTransition
+            }
+        } else {
+            enterScreenFromRightTransition
+        }
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+private val exitEditNoteTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+    { exitScreenToLeftTransition }
+
+@OptIn(ExperimentalAnimationApi::class)
+private val enterEditNotePopTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+    { enterScreenFromLeftTransition }
+
+/**
+ * Generates an [ExitTransition] for the [NoteEditingActivity] based on the [FabPosition].
+ */
+@OptIn(ExperimentalAnimationApi::class)
+private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? {
+    return {
+        if (
+            targetState.destination.route == Destinations.viewNoteListRoute &&
+            isNewNote(initialState)
+        ) {
+            if (fabPosition.value == FabPosition.Center) {
+                exitNewNoteCenterTransition
+            } else {
+                exitNewNoteRightTransition
+            }
+        } else {
+            exitScreenToRightTransition
+        }
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+private val enterDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+    { enterScreenFromRightTransition }
+
+@OptIn(ExperimentalAnimationApi::class)
+private val exitDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+    { exitScreenToRightTransition }
+
+/**
+ * Returns the creation date of the note from the [NavBackStackEntry].
+ */
+private fun getCreationDate(backStackEntryArgument: Bundle) = Date.fromString(
+    backStackEntryArgument.getString(Destinations.ParametersName.noteCreationDate)!!
+)
+
+/**
+ * Indicates whether the note is new based on the [NavBackStackEntry].
+ */
+private fun isNewNote(navBackStackEntry: NavBackStackEntry): Boolean {
+    return navBackStackEntry.destination.route == Destinations.newNoteRoute
 }

@@ -89,7 +89,7 @@ fun BackPressHandler(onBackPress: () -> Unit = {}) {
  *
  * Depending on the maximum width of the parent, the button can be either a regular FAB or an
  * extended FAB. The extended FAB is used when the parent is wider or equal to
- * [Values.Limit.minWidthRequiredExtendedFab].
+ * [Values.minWidthRequiredExtendedFab].
  *
  * @param text The text to display in the FAB.
  * @param icon The icon to display in the FAB.
@@ -102,7 +102,7 @@ fun BackPressHandler(onBackPress: () -> Unit = {}) {
 fun AnimatedFab(
     text: String,
     icon: @Composable () -> Unit = {},
-    parentMaxWidth: Dp = Values.Limit.minWidthRequiredExtendedFab,
+    parentMaxWidth: Dp = Values.minWidthRequiredExtendedFab,
     isVisible: () -> Boolean = { true },
     onClick: () -> Unit = {},
 ) {
@@ -111,7 +111,7 @@ fun AnimatedFab(
         enter = scaleIn(Values.emphasizedFloat),
         exit = scaleOut(Values.emphasizedFloat),
     ) {
-        if (parentMaxWidth <= Values.Limit.minWidthRequiredExtendedFab) {
+        if (parentMaxWidth <= Values.minWidthRequiredExtendedFab) {
             FloatingActionButton(
                 onClick = onClick,
                 content = icon,
@@ -126,6 +126,13 @@ fun AnimatedFab(
     }
 }
 
+/**
+ * An [IconButton] that appears and disappears with an animation.
+ *
+ * @param visibleStateProvider A lambda that returns whether the button should be visible.
+ * @param onClick The action to execute when the button is clicked.
+ * @param icon The icon to display in the button.
+ */
 @Composable
 fun AnimatedIconButton(
     visibleStateProvider: () -> Boolean = { true },

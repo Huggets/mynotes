@@ -114,6 +114,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Only initialize the BluetoothConnectionManager once.
         if (bluetoothConnectionManager == null) {
             bluetoothConnectionManager = BluetoothConnectionManager(
                 getSystemService(BluetoothManager::class.java),
@@ -193,10 +194,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             NoteApp(
-                quitApplication = quitApplication,
-                exportToXml = exportToXml,
-                importFromXml = importFromXml,
                 noteViewModel = noteViewModel,
+                quitApplication = quitApplication,
+                export = exportToXml,
+                import = importFromXml,
             )
         }
     }
