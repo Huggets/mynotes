@@ -2,7 +2,6 @@ package com.huggets.mynotes.ui.activity
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,15 +13,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShapeDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,6 +81,21 @@ fun Synchronizer(
         onDismiss = { navigateUpWhenCancelling = false },
     )
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarWasNotShown by remember(appState.value.synchronizationState.synchronisationError) {
+        mutableStateOf(appState.value.synchronizationState.synchronisationError)
+    }
+    val errorMessagePrefix = stringResource(R.string.synchronization_error)
+
+    LaunchedEffect(appState.value.synchronizationState.synchronisationError) {
+        if (appState.value.synchronizationState.synchronisationError && snackbarWasNotShown) {
+            val message =
+                "$errorMessagePrefix: ${appState.value.synchronizationState.synchronisationErrorMessage}"
+            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Long)
+            snackbarWasNotShown = false
+        }
+    }
+
     Scaffold(
         topBar = {
             AppBar(
@@ -91,6 +109,7 @@ fun Synchronizer(
                 }
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) {
         MainContent(
             appState = appState,
@@ -147,21 +166,7 @@ private fun MainContent(
                 textAlign = TextAlign.Center,
             )
         } else {
-            Column {
-                if (appState.value.synchronizationState.synchronisationError) {
-                    Text(
-                        text = stringResource(R.string.synchronization_error),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(0.dp, Values.smallPadding)
-                            .fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-
-                BluetoothDevices(appState, syncWithDevice)
-            }
+            BluetoothDevices(appState, syncWithDevice)
         }
     }
 }
