@@ -9,5 +9,8 @@ data class NoteAppUiState(
     val isImporting: Boolean = false,
     val importFailed: Boolean = false,
     val importFailedMessage: String = "",
+    val isExporting: Boolean = false,
+    val exportFailed: Boolean = false,
+    val exportFailedMessage: String = "",
     val dataSyncingUiState: DataSyncingUiState = DataSyncingUiState(),
 )

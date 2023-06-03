@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -175,7 +174,6 @@ fun NoteApp(
     exportToXml: () -> Unit,
     importFromXml: () -> Unit,
     noteViewModel: NoteViewModel,
-    snackbarHostState: SnackbarHostState,
 ) {
     val navigationController = rememberAnimatedNavController()
     val appState = noteViewModel.uiState.collectAsStateWithLifecycle()
@@ -235,7 +233,6 @@ fun NoteApp(
                 ) {
                     NoteListActivity(
                         appState = appState,
-                        snackbarHostState = snackbarHostState,
                         fabPosition = fabPosition,
                         quitApplication = quitApplication,
                         navigateUp = navigateUpWithReturnValue,

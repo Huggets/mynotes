@@ -109,6 +109,9 @@ class NoteViewModel(
         }
     }
 
+    /**
+     * Update the given note in the database.
+     */
     fun updateNote(note: NoteItemUiState) {
         viewModelScope.launch {
             noteRepository.update(note.toNote())
@@ -135,6 +138,13 @@ class NoteViewModel(
         }
     }
 
+    /**
+     * Associate a note (given by its creation date) with a parent note (given by its creation date).
+     *
+     * @param parentCreationDate The creation date of the parent note. If null, the note will not be
+     * associated with any parent note.
+     * @param creationDate The creation date of the note to associate.
+     */
     private suspend fun associateNote(parentCreationDate: Date?, creationDate: Date) {
         if (parentCreationDate != null) {
             val noteAssociation = NoteAssociationItemUiState(parentCreationDate, creationDate)
@@ -145,7 +155,7 @@ class NoteViewModel(
     }
 
     /**
-     * Deletes a note and all its children
+     * Deletes a note (by its creation date) and all its children in the database.
      */
     fun deleteNote(creationDate: Date) {
         viewModelScope.launch {
@@ -160,7 +170,50 @@ class NoteViewModel(
         }
     }
 
-    fun exportToXml(stream: OutputStream) {
+    /**
+     * Open a document for writing and export the data to it.
+     *
+     * @param openDocument The lambda to open the document. When the lambda is finished, it must
+     * call [onExportedFileOpened].
+     */
+    fun export(openDocument: () -> Unit) {
+        _uiState.value =
+            _uiState.value.copy(isExporting = true, exportFailed = false, exportFailedMessage = "")
+
+        openDocument()
+    }
+
+    /**
+     * Exports the data to a file if the user chose a file to export to.
+     *
+     * @param stream The stream to write the data to. If null and [fileChosen] is true, the export
+     * failed.
+     * @param fileChosen Whether the user chose a file to export to.
+     */
+    fun onExportedFileOpened(stream: OutputStream?, fileChosen: Boolean) {
+        if (!fileChosen) {
+            _uiState.value = _uiState.value.copy(
+                isExporting = false,
+                exportFailed = false,
+                exportFailedMessage = "",
+            )
+        } else if (stream == null) {
+            _uiState.value = _uiState.value.copy(
+                isExporting = false,
+                exportFailed = true,
+                exportFailedMessage = resources.getString(R.string.error_export_xml_writing_file)
+            )
+        } else {
+            dataToXml(stream)
+        }
+    }
+
+    /**
+     * Exports the data to XML.
+     *
+     * @param stream The stream to write the data to.
+     */
+    private fun dataToXml(stream: OutputStream) {
         viewModelScope.launch(Dispatchers.IO) {
             val serializer = Xml.newSerializer()
             serializer.setOutput(stream, "UTF-8")
@@ -178,6 +231,11 @@ class NoteViewModel(
         }
     }
 
+    /**
+     * Converts all the notes to XML.
+     *
+     * @param serializer The serializer to use.
+     */
     private suspend fun notesToXml(serializer: XmlSerializer) {
         serializer.startTag("", "notes")
 
@@ -193,6 +251,11 @@ class NoteViewModel(
         serializer.endTag("", "notes")
     }
 
+    /**
+     * Converts all the note associations to XML.
+     *
+     * @param serializer The serializer to use.
+     */
     private suspend fun noteAssociationsToXml(serializer: XmlSerializer) {
         serializer.startTag("", "noteAssociations")
 
@@ -214,6 +277,9 @@ class NoteViewModel(
         serializer.endTag("", "noteAssociations")
     }
 
+    /**
+     * Converts all the deleted notes to XML.
+     */
     private suspend fun deletedNotesToXml(serializer: XmlSerializer) {
         serializer.startTag("", "deletedNotes")
 
@@ -230,10 +296,49 @@ class NoteViewModel(
         serializer.endTag("", "deletedNotes")
     }
 
-    fun importFromXml(stream: InputStream) {
+    /**
+     * Open a document for reading and import the data from it.
+     *
+     * @param openDocument The lambda to open the document. When the lambda is finished, it must
+     * call [onImportedFileOpened].
+     */
+    fun import(openDocument: () -> Unit) {
         _uiState.value =
             _uiState.value.copy(isImporting = true, importFailed = false, importFailedMessage = "")
 
+        openDocument()
+    }
+
+    /**
+     * Imports the data from a file if the user chose a file to import from.
+     *
+     * @param stream The stream to read the data from. If null and [fileChosen] is true, the import
+     * failed.
+     */
+    fun onImportedFileOpened(stream: InputStream?, fileChosen: Boolean) {
+        if (!fileChosen) {
+            _uiState.value = _uiState.value.copy(
+                isImporting = false,
+                importFailed = false,
+                importFailedMessage = "",
+            )
+        } else if (stream == null) {
+            _uiState.value = _uiState.value.copy(
+                isImporting = false,
+                importFailed = true,
+                importFailedMessage = resources.getString(R.string.error_import_xml_reading_file)
+            )
+        } else {
+            dataFromXml(stream)
+        }
+    }
+
+    /**
+     * Imports the data from XML.
+     *
+     * @param stream The stream to read the data from.
+     */
+    private fun dataFromXml(stream: InputStream) {
         viewModelScope.launch(Dispatchers.IO) {
             val parser = Xml.newPullParser()
             parser.setInput(stream, "UTF-8")
@@ -319,6 +424,9 @@ class NoteViewModel(
         }
     }
 
+    /**
+     * Updates the list of bonded Bluetooth devices.
+     */
     private fun updateBondedBluetoothDevices() {
         val bondedDevices = mutableMapOf<String, String>().apply {
             bluetoothConnectionManager.getBondedDevices().forEach {
@@ -338,6 +446,11 @@ class NoteViewModel(
         )
     }
 
+    /**
+     * Enables Bluetooth if it is supported and not enabled yet.
+     *
+     * If the user has not granted the permission to use Bluetooth, it will be requested.
+     */
     fun enableBluetooth() {
         _uiState.value = _uiState.value.copy(
             dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
@@ -360,6 +473,9 @@ class NoteViewModel(
         }
     }
 
+    /**
+     * Stops any ongoing Bluetooth connection.
+     */
     fun cancelBluetoothConnection() {
         bluetoothConnectionManager.stopConnection()
         _uiState.value = _uiState.value.copy(
@@ -370,6 +486,11 @@ class NoteViewModel(
         )
     }
 
+    /**
+     * Connects to the Bluetooth device with the given address.
+     *
+     * @param deviceAddress The address of the device to connect to.
+     */
     fun connectToBluetoothDevice(deviceAddress: String) {
         val device = bluetoothConnectionManager.getBondedDevices().find {
             it.address.equals(deviceAddress)
@@ -390,6 +511,11 @@ class NoteViewModel(
         )
     }
 
+    /**
+     * Called when a Bluetooth connection is established.
+     *
+     * It starts the data synchronization process.
+     */
     private fun onBluetoothConnectionEstablished() {
         _uiState.value = _uiState.value.copy(
             dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(
@@ -428,6 +554,11 @@ class NoteViewModel(
         }
     }
 
+    /**
+     * Called when a Bluetooth connection error occurs.
+     *
+     * @param exception The exception that caused the error.
+     */
     private fun onBluetoothConnectionError(exception: Exception) {
         _uiState.value = _uiState.value.copy(
             dataSyncingUiState = _uiState.value.dataSyncingUiState.copy(

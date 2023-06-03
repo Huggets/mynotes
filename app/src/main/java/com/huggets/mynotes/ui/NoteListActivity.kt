@@ -1,6 +1,5 @@
 package com.huggets.mynotes.ui
 
-import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -31,17 +30,15 @@ import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 
+// TODO : Add comments
 /**
  * Display a lists of the main notes (notes that do not have a parent).
  *
  * @param appState The state of the app.
- * @param snackbarHostState The state of the snackbar.
- *
  */
 @Composable
 fun NoteListActivity(
     appState: State<NoteAppUiState>,
-    snackbarHostState: SnackbarHostState,
     fabPosition: MutableState<FabPosition>,
     quitApplication: () -> Unit = {},
     navigateUp: () -> Boolean = { false },
@@ -76,6 +73,7 @@ fun NoteListActivity(
     BoxWithConstraints {
         val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
         var shouldFabBeShown by rememberSaveable { mutableStateOf(true) }
+        val snackbarHostState = remember { SnackbarHostState() }
 
         fabPosition.value =
             if (maxWidth < Values.Limit.minWidthRequiredFabToLeft)
@@ -111,16 +109,23 @@ fun NoteListActivity(
             floatingActionButtonPosition = fabPosition.value,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { padding ->
-            // TODO Modify NoteViewModel to change importFailed to false on click instead of on result
-
-            var snackbarNotShown by rememberSaveable(appState.value.importFailed) {
+            var importSnackbarShown by rememberSaveable(appState.value.importFailed) {
                 mutableStateOf(appState.value.importFailed)
+            }
+            var exportSnackbarShown by rememberSaveable(appState.value.exportFailed) {
+                mutableStateOf(appState.value.exportFailed)
             }
 
             LaunchedEffect(appState.value.importFailed) {
-                if (appState.value.importFailed && snackbarNotShown) {
+                if (appState.value.importFailed && importSnackbarShown) {
                     snackbarHostState.showSnackbar(appState.value.importFailedMessage)
-                    snackbarNotShown = false
+                    importSnackbarShown = false
+                }
+            }
+            LaunchedEffect(appState.value.exportFailed) {
+                if (appState.value.exportFailed && exportSnackbarShown) {
+                    snackbarHostState.showSnackbar(appState.value.exportFailedMessage)
+                    exportSnackbarShown = false
                 }
             }
 
@@ -181,7 +186,6 @@ private fun MainContent(
     onScrollUp: () -> Unit = {},
     onScrollDown: () -> Unit = {},
 ) {
-    Log.d("MainContent", "Recompose MainContent")
     if (appState.value.isImporting) {
         Box(maxSizeWithPaddingModifier) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))

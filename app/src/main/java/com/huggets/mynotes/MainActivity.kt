@@ -7,27 +7,19 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
+import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.ui.NoteApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
-import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
 
@@ -142,92 +134,69 @@ class MainActivity : ComponentActivity() {
             }
         }) { NoteViewModel.Factory }
 
-        var showSnackbar: MutableState<Boolean>? = null
-        var snackbarMessage: MutableState<String>? = null
-
-        val createDocument =
-            registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
-                if (it != null) {
-                    runBlocking {
-                        withContext(Dispatchers.IO) {
-                            try {
-                                applicationContext.contentResolver.openOutputStream(it, "wt")
-                                    ?.let { stream ->
-                                        noteViewModel.exportToXml(stream)
-                                    }
-                            } catch (e: FileNotFoundException) {
-                                // Show an error message in the log and in a snackbar
-                                Log.e("MainActivity", e.stackTraceToString())
-
-                                snackbarMessage?.value =
-                                    resources.getString(R.string.error_export_xml_writing_file)
-                                showSnackbar?.value = true
-                            }
-                        }
-                    }
-                }
-            }
-        val readDocument =
+        val openDocumentLauncher =
             registerForActivityResult(ActivityResultContracts.OpenDocument()) {
-                if (it != null) {
-                    runBlocking {
-                        withContext(Dispatchers.IO) {
-                            try {
-                                applicationContext.contentResolver.openInputStream(it)
-                                    ?.let { stream ->
-                                        noteViewModel.importFromXml(stream)
-                                    }
-                            } catch (e: FileNotFoundException) {
-                                // Show an error message in the log and in a snackbar
-                                Log.e("MainActivity", e.stackTraceToString())
-
-                                snackbarMessage?.value =
-                                    resources.getString(R.string.error_import_xml_reading_file)
-                                showSnackbar?.value = true
-                            }
+                val fileChosen: Boolean
+                val stream = if (it == null) {
+                    fileChosen = false
+                    null
+                } else {
+                    fileChosen = true
+                    try {
+                        runBlocking(Dispatchers.IO) {
+                            applicationContext.contentResolver.openInputStream(it)
                         }
+                    } catch (e: FileNotFoundException) {
+                        null
                     }
                 }
+                noteViewModel.onImportedFileOpened(stream, fileChosen)
+            }
+
+        val createDocumentLauncher =
+            registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
+                val fileChosen: Boolean
+                val stream = if (it == null) {
+                    fileChosen = false
+                    null
+                } else {
+                    fileChosen = true
+                    try {
+                        runBlocking(Dispatchers.IO) {
+                            applicationContext.contentResolver.openOutputStream(it, "wt")
+                        }
+                    } catch (e: FileNotFoundException) {
+                        null
+                    }
+                }
+                noteViewModel.onExportedFileOpened(stream, fileChosen)
             }
 
         val quitApplication: () -> Unit = { finish() }
 
+        val importFromXml: () -> Unit = {
+            noteViewModel.import {
+                openDocumentLauncher.launch(arrayOf("text/plain"))
+            }
+        }
+        val exportToXml: () -> Unit = {
+            noteViewModel.export {
+                Date.getCurrentTime().apply {
+                    createDocumentLauncher.launch(
+                        "notes_$year-$month-$day-$hour-$minute-$second.txt"
+                    )
+                }
+            }
+        }
+
         noteViewModel.syncUiState()
 
         setContent {
-            val exportToXml: () -> Unit = {
-                val calendar = Calendar.getInstance()
-                val year = calendar.get(Calendar.YEAR)
-                val month = calendar.get(Calendar.MONTH)
-                val day = calendar.get(Calendar.DAY_OF_MONTH)
-                val hour = calendar.get(Calendar.HOUR_OF_DAY)
-                val minute = calendar.get(Calendar.MINUTE)
-                val second = calendar.get(Calendar.SECOND)
-
-                createDocument.launch(
-                    "notes_$year-$month-$day-$hour-$minute-$second.txt"
-                )
-            }
-            val importFromXml: () -> Unit = {
-                readDocument.launch(arrayOf("text/plain"))
-            }
-            val snackbarHostState = remember { SnackbarHostState() }
-            showSnackbar = rememberSaveable { mutableStateOf(false) }
-            snackbarMessage = rememberSaveable { mutableStateOf("") }
-
-            if (showSnackbar!!.value) {
-                LaunchedEffect(snackbarHostState) {
-                    snackbarHostState.showSnackbar(snackbarMessage!!.value)
-                    showSnackbar!!.value = false
-                }
-            }
-
             NoteApp(
                 quitApplication = quitApplication,
                 exportToXml = exportToXml,
                 importFromXml = importFromXml,
                 noteViewModel = noteViewModel,
-                snackbarHostState = snackbarHostState,
             )
         }
     }
