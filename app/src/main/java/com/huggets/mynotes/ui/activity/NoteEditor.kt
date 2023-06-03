@@ -66,6 +66,13 @@ fun NoteEditor(
     var isDeleted by rememberSaveable { mutableStateOf(false) }
     var isModified by rememberSaveable { mutableStateOf(false) }
 
+    /**
+     * Whether the note should be deleted when navigating up.
+     *
+     * It is true if the note is new and has not been saved yet.
+     */
+    var shouldBeDeleted by rememberSaveable { mutableStateOf(isNew) }
+
     val showDeleteConfirmation = rememberSaveable { mutableStateOf(false) }
     val showCancelConfirmation = rememberSaveable { mutableStateOf(false) }
 
@@ -73,7 +80,7 @@ fun NoteEditor(
         if (isModified) {
             showCancelConfirmation.value = true
         } else {
-            if (isNew) {
+            if (shouldBeDeleted) {
                 // The note is not kept and must be deleted
                 isDeleted = true
                 deleteNote(noteCreationDate)
@@ -81,6 +88,12 @@ fun NoteEditor(
 
             navigateUp()
         }
+    }
+
+    val createAssociatedNote = { creationDate: Date, onCreationDone: (Date) -> Unit ->
+        isModified = true
+
+        createNote(creationDate, onCreationDone)
     }
 
     BackPressHandler(cancelChangesAndNavigateUp)
@@ -94,17 +107,25 @@ fun NoteEditor(
         },
         message = stringResource(R.string.confirmation_message_delete_note),
     )
+
+    val cancelMessageExistingNote = stringResource(R.string.confirmation_message_cancel_changes)
+    val cancelMessageNewNote = stringResource(R.string.confirmation_message_cancel_changes_new_note)
     ConfirmationDialog(
         displayDialog = showCancelConfirmation,
         onConfirm = {
-            if (isNew) {
+            if (shouldBeDeleted) {
                 // The note is not kept and must be deleted
                 deleteNote(noteCreationDate)
                 isDeleted = true
             }
             navigateUp()
         },
-        message = stringResource(R.string.confirmation_message_cancel_changes),
+        messageProvider = {
+            if (shouldBeDeleted)
+                cancelMessageNewNote
+            else
+                cancelMessageExistingNote
+        },
     )
 
     // Note can be null if it was just created (the view model has not finished updating yet)
@@ -125,6 +146,8 @@ fun NoteEditor(
             saveNote(updatedNote) {
                 isModified = false
             }
+
+            shouldBeDeleted = false
         }
         val showDeleteConfirmationDialog: () -> Unit = {
             showDeleteConfirmation.value = true
@@ -167,7 +190,7 @@ fun NoteEditor(
                     isModified = true
                 },
                 navigateToNote = navigateToNote,
-                createNote = createNote,
+                createAssociatedNote = createAssociatedNote,
             )
         }
     }
@@ -183,7 +206,8 @@ fun NoteEditor(
  * @param contentProvider The lambda to call to get the content of the note.
  * @param onContentChanges Called when the content of the note changes.
  * @param navigateToNote The lambda to call to navigate to another note.
- * @param createNote The lambda to call to create a new note.
+ * @param createAssociatedNote The lambda to call to create a new note that will be associated
+ * with the current note.
  */
 @Composable
 private fun MainContent(
@@ -194,7 +218,7 @@ private fun MainContent(
     contentProvider: () -> String = { "" },
     onContentChanges: (String) -> Unit = {},
     navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
-    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
+    createAssociatedNote: (parentCreationDate: Date, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
 ) {
     Column(modifier) {
         var tabIndex by rememberSaveable { mutableStateOf(0) }
@@ -229,7 +253,7 @@ private fun MainContent(
                 appState = appState,
                 note = note,
                 visibleStateProvider = { areAssociatedNotesVisible },
-                createNote = createNote,
+                createAssociatedNote = createAssociatedNote,
                 navigateToNote = navigateToNote,
             )
         }
@@ -351,8 +375,9 @@ private fun ContentEditor(
  * @param note The parent note of the associated notes.
  * @param visibleStateProvider The lambda to call that returns whether the associated notes are
  * visible.
- * @param createNote The lambda to call when the user wants to create a new note. It takes the
- * parent creation date and a lambda to call when the creation is done as parameters.
+ * @param createAssociatedNote The lambda to call when the user wants to create an associated note.
+ * It takes the creation date of the parent note and a lambda to call when the creation is done
+ * with the creation date of the new note as a parameter.
  * @param navigateToNote The lambda to call when the user wants to navigate to a note. It takes the
  * creation date of the note and whether the note is new as parameters.
  */
@@ -361,7 +386,7 @@ private fun AssociatedNotes(
     appState: State<NoteAppUiState>,
     note: NoteItemUiState,
     visibleStateProvider: () -> Boolean,
-    createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
+    createAssociatedNote: (parentCreationDate: Date, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
     navigateToNote: (creationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
 ) {
     AnimatedVisibility(
@@ -386,7 +411,7 @@ private fun AssociatedNotes(
                 Button(
                     onClick = {
                         // Create and edit the new note
-                        createNote(note.creationDate) { newNoteCreationDate ->
+                        createAssociatedNote(note.creationDate) { newNoteCreationDate ->
                             navigateToNote(newNoteCreationDate, true)
                         }
                     },

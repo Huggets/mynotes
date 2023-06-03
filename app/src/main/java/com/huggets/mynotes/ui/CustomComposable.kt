@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -26,13 +25,15 @@ import com.huggets.mynotes.R
 /**
  * When displayDialog is true, show a Dialog that ask for a confirmation.
  *
- * If the user confirm, run onConfirm and close the dialog.
+ * @param displayDialog A mutable state that indicates whether the dialog should be displayed.
+ * @param message The message to display in the dialog.
+ * @param onConfirm The action to execute when the user confirms.
+ * @param onDismiss The action to execute when the user dismisses.
  */
 @Composable
 fun ConfirmationDialog(
     displayDialog: MutableState<Boolean>,
     message: String,
-    modifier: Modifier = Modifier,
     onConfirm: () -> Unit = {},
     onDismiss: () -> Unit = {},
 ) {
@@ -51,9 +52,31 @@ fun ConfirmationDialog(
             confirmButton = { Button(onClick = confirm) { Text(stringResource(R.string.yes)) } },
             dismissButton = { Button(onClick = dismiss) { Text(stringResource(R.string.no)) } },
             text = { Text(message) },
-            modifier = modifier
         )
     }
+}
+
+/**
+ * When displayDialog is true, show a Dialog that ask for a confirmation.
+ *
+ * @param displayDialog A mutable state that indicates whether the dialog should be displayed.
+ * @param messageProvider A lambda that returns the message to display in the dialog.
+ * @param onConfirm The action to execute when the user confirms.
+ * @param onDismiss The action to execute when the user dismisses.
+ */
+@Composable
+fun ConfirmationDialog(
+    displayDialog: MutableState<Boolean>,
+    messageProvider: () -> String,
+    onConfirm: () -> Unit = {},
+    onDismiss: () -> Unit = {},
+) {
+    ConfirmationDialog(
+        displayDialog = displayDialog,
+        message = messageProvider(),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+    )
 }
 
 /**

@@ -11,7 +11,7 @@
     <string name="import_data">Importer des données</string>
     <string name="synchronize_data">Synchroniser les données</string>
     <string name="add_new_note">Ajouter une nouvelle note</string>
-    <string name="confirmation_message_delete_note">Êtes-vous sûr(e) de vouloir supprimer cette note ?</string>
+    <string name="confirmation_message_delete_note">Êtes-vous sûr(e) de vouloir supprimer cette note et les notes associées ?</string>
     <string name="confirmation_message_cancel_changes">Annuler les changements ?</string>
     <string name="tab_edit">Éditer</string>
     <string name="tab_associated_notes">Notes associées</string>
@@ -36,4 +36,5 @@
     <string name="error_import_xml_reading_file">Erreur lors de la lecture du fichier !</string>
     <string name="no_message">Pas de message</string>
     <string name="unsupported_version">Version non supportée</string>
+    <string name="confirmation_message_cancel_changes_new_note">Les changements n’ont pas été sauvegardés, voulez-vous supprimer cette note ? (Cela supprimera aussi les notes associées)</string>
 </resources>
