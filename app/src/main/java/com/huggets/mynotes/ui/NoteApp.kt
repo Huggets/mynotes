@@ -24,6 +24,9 @@ import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
 import com.huggets.mynotes.ui.Values.Animation
 import com.huggets.mynotes.ui.Values.Animation.slideOffset
+import com.huggets.mynotes.ui.activity.NoteEditor
+import com.huggets.mynotes.ui.activity.NotesList
+import com.huggets.mynotes.ui.activity.Synchronizer
 import com.huggets.mynotes.ui.state.NoteItemUiState
 
 /**
@@ -98,7 +101,7 @@ fun NoteApp(
                     popEnterTransition = enterViewListTransition,
                     exitTransition = exitViewListTransition,
                 ) {
-                    NoteListActivity(
+                    NotesList(
                         appState = appState,
                         fabPosition = fabPosition,
                         quitApplication = quitApplication,
@@ -106,9 +109,9 @@ fun NoteApp(
                         navigateToNote = navigateToNote,
                         createNote = createNote,
                         deleteNotes = deleteNotes,
-                        exportToXml = export,
-                        importFromXml = import,
-                        startSyncDataWithAnotherDevice = startSyncDataWithAnotherDevice,
+                        export = export,
+                        import = import,
+                        startSynchronization = startSyncDataWithAnotherDevice,
                     )
                 }
 
@@ -119,7 +122,7 @@ fun NoteApp(
                     popExitTransition = exitEditNotePopTransition,
                     popEnterTransition = enterEditNotePopTransition,
                 ) { backStackEntry ->
-                    NoteEditingActivity(
+                    NoteEditor(
                         appState = appState,
                         noteCreationDate = getCreationDate(backStackEntry.arguments!!),
                         isNew = false,
@@ -138,7 +141,7 @@ fun NoteApp(
                     popExitTransition = exitEditNotePopTransition,
                     popEnterTransition = enterEditNotePopTransition,
                 ) { backStackEntry ->
-                    NoteEditingActivity(
+                    NoteEditor(
                         appState = appState,
                         noteCreationDate = getCreationDate(backStackEntry.arguments!!),
                         isNew = true,
@@ -156,7 +159,7 @@ fun NoteApp(
                     exitTransition = exitDataSyncingTransition,
                     popExitTransition = exitDataSyncingTransition,
                 ) {
-                    SynchronizationActivity(
+                    Synchronizer(
                         appState = appState,
                         navigateUp = navigateUp,
                         cancelSync = cancelSync,
@@ -261,7 +264,7 @@ private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -
     }
 
 /**
- * Generates an [EnterTransition] for the [NoteEditingActivity] based on the [FabPosition].
+ * Generates an [EnterTransition] for the [NoteEditor] based on the [FabPosition].
  */
 @OptIn(ExperimentalAnimationApi::class)
 private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? {
@@ -290,7 +293,7 @@ private val enterEditNotePopTransition: AnimatedContentScope<NavBackStackEntry>.
     { enterScreenFromLeftTransition }
 
 /**
- * Generates an [ExitTransition] for the [NoteEditingActivity] based on the [FabPosition].
+ * Generates an [ExitTransition] for the [NoteEditor] based on the [FabPosition].
  */
 @OptIn(ExperimentalAnimationApi::class)
 private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? {

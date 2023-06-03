@@ -1,4 +1,4 @@
-package com.huggets.mynotes.ui
+package com.huggets.mynotes.ui.activity
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,10 +32,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.huggets.mynotes.R
+import com.huggets.mynotes.ui.BackPressHandler
+import com.huggets.mynotes.ui.ConfirmationDialog
+import com.huggets.mynotes.ui.Values
 import com.huggets.mynotes.ui.state.NoteAppUiState
 
 /**
- * The UI for the synchronization activity.
+ * The data synchronizer.
+ *
+ * It synchronizes the data of this device with the data of another device.
  *
  * @param appState The app state.
  * @param navigateUp The lambda to call to navigate up.
@@ -43,7 +48,7 @@ import com.huggets.mynotes.ui.state.NoteAppUiState
  * @param syncWithDevice The lambda to call to synchronize data with a device.
  */
 @Composable
-fun SynchronizationActivity(
+fun Synchronizer(
     appState: State<NoteAppUiState>,
     navigateUp: () -> Unit = {},
     cancelSync: () -> Unit = {},

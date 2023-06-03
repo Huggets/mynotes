@@ -1,4 +1,4 @@
-package com.huggets.mynotes.ui
+package com.huggets.mynotes.ui.activity
 
 import android.util.Log
 import androidx.compose.animation.*
@@ -27,18 +27,33 @@ import com.huggets.mynotes.*
 import com.huggets.mynotes.R
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
+import com.huggets.mynotes.ui.AnimatedFab
+import com.huggets.mynotes.ui.AnimatedIconButton
+import com.huggets.mynotes.ui.BackPressHandler
+import com.huggets.mynotes.ui.ConfirmationDialog
+import com.huggets.mynotes.ui.Values
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState.Companion.find
 
-// TODO : Add comments
 /**
- * Display a lists of the main notes (notes that do not have a parent).
+ * A list of the main notes (notes that do not have a parent).
  *
  * @param appState The state of the app.
+ * @param fabPosition The position of the FAB.
+ * @param quitApplication The function to call when the user wants to quit the application.
+ * @param navigateUp The function to call when the user wants to navigate up. Returns true if the
+ * navigation was successful, false otherwise.
+ * @param navigateToNote The function to call when the user wants to navigate to a note.
+ * @param createNote The function to call when the user wants to create a new note.
+ * @param deleteNotes The function to call when the user wants to delete notes.
+ * @param export The function to call when the user wants to export notes.
+ * @param import The function to call when the user wants to import notes.
+ * @param startSynchronization The function to call when the user wants to start the synchronization
+ * with another device.
  */
 @Composable
-fun NoteListActivity(
+fun NotesList(
     appState: State<NoteAppUiState>,
     fabPosition: MutableState<FabPosition>,
     quitApplication: () -> Unit = {},
@@ -46,9 +61,9 @@ fun NoteListActivity(
     navigateToNote: (noteCreationDate: Date, isNew: Boolean) -> Unit = { _, _ -> },
     createNote: (parentCreationDate: Date?, onCreationDone: (newNoteCreationDate: Date) -> Unit) -> Unit = { _, _ -> },
     deleteNotes: (creationDates: List<Date>) -> Unit = {},
-    exportToXml: () -> Unit = {},
-    importFromXml: () -> Unit = {},
-    startSyncDataWithAnotherDevice: () -> Unit = {},
+    export: () -> Unit = {},
+    import: () -> Unit = {},
+    startSynchronization: () -> Unit = {},
 ) {
     val inSelectionMode = rememberSaveable { mutableStateOf(false) }
     val notesSelectionState = rememberSaveable(saver = selectedNotesSaver) { mutableStateMapOf() }
@@ -86,10 +101,10 @@ fun NoteListActivity(
             topBar = {
                 AppBar(
                     isDeleteIconVisible = { inSelectionMode.value },
-                    deleteSelectedNote = { showDeleteConfirmation.value = true },
-                    exportToXml = exportToXml,
-                    importFromXml = importFromXml,
-                    startSyncDataWithAnotherDevice = startSyncDataWithAnotherDevice,
+                    onDelete = { showDeleteConfirmation.value = true },
+                    onExport = export,
+                    onImport = import,
+                    startSynchronization = startSynchronization,
                 )
             },
             floatingActionButton = {
@@ -173,8 +188,8 @@ fun NoteListActivity(
  * @param selectedNotesCount The number of selected notes.
  * @param modifier The modifier to apply to the content.
  * @param navigateToNote The function to call when the user wants to navigate to a note.
- * @param onScrollUp The function to call when the user scrolls up.
- * @param onScrollDown The function to call when the user scrolls down.
+ * @param onScrollUp Called when the user scrolls up.
+ * @param onScrollDown Called when the user scrolls down.
  */
 @Composable
 private fun MainContent(
@@ -393,26 +408,30 @@ private fun AnimatedSelectionSurface(
 /**
  * The app bar of the note list screen.
  *
- * @param isDeleteIconVisible Whether the delete icon should be visible.
+ * @param isDeleteIconVisible Returns true if the delete icon should be visible.
+ * @param onDelete Called when the delete icon is clicked.
+ * @param onExport Called when the export icon is clicked.
+ * @param onImport Called when the import icon is clicked.
+ * @param startSynchronization Called when the synchronize icon is clicked.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppBar(
     isDeleteIconVisible: () -> Boolean = { true },
-    deleteSelectedNote: () -> Unit = {},
-    exportToXml: () -> Unit = {},
-    importFromXml: () -> Unit = {},
-    startSyncDataWithAnotherDevice: () -> Unit = {},
+    onDelete: () -> Unit = {},
+    onExport: () -> Unit = {},
+    onImport: () -> Unit = {},
+    startSynchronization: () -> Unit = {},
 ) {
     TopAppBar(
         title = { Text(stringResource(R.string.note_list_activity_name)) },
         actions = {
             AppBarActions(
                 isDeleteIconVisible = isDeleteIconVisible,
-                deleteSelectedNote = deleteSelectedNote,
-                exportToXml = exportToXml,
-                importFromXml = importFromXml,
-                synchronizeWithAnotherDevice = startSyncDataWithAnotherDevice,
+                onDelete = onDelete,
+                onExport = onExport,
+                onImport = onImport,
+                synchronizeWithAnotherDevice = startSynchronization,
             )
         },
     )
@@ -426,29 +445,29 @@ private fun AppBar(
  * - Synchronize data with another device.
  *
  * @param isDeleteIconVisible Whether the delete icon should be visible.
- * @param deleteSelectedNote Called when the delete icon is clicked.
- * @param exportToXml Called when the export action is clicked.
- * @param importFromXml Called when the import action is clicked.
+ * @param onDelete Called when the delete icon is clicked.
+ * @param onExport Called when the export action is clicked.
+ * @param onImport Called when the import action is clicked.
  * @param synchronizeWithAnotherDevice Called when the synchronize action is clicked.
  */
 @Composable
 private fun AppBarActions(
     isDeleteIconVisible: () -> Boolean = { true },
-    deleteSelectedNote: () -> Unit = {},
-    exportToXml: () -> Unit = {},
-    importFromXml: () -> Unit = {},
+    onDelete: () -> Unit = {},
+    onExport: () -> Unit = {},
+    onImport: () -> Unit = {},
     synchronizeWithAnotherDevice: () -> Unit = {},
 ) {
     AnimatedIconButton(
         visibleStateProvider = isDeleteIconVisible,
-        onClick = deleteSelectedNote,
+        onClick = onDelete,
     ) {
         Icon(Icons.Filled.Delete, stringResource(R.string.delete_selected_notes))
     }
 
     DropdownMenu(
-        exportToXml = exportToXml,
-        importFromXml = importFromXml,
+        onExport = onExport,
+        onImport = onImport,
         synchronizeWithAnotherDevice = synchronizeWithAnotherDevice,
     )
 }
@@ -459,15 +478,15 @@ private fun AppBarActions(
  * - Import from XML,
  * - Synchronize data with another device.
  *
- * @param exportToXml The action to execute when the user clicks on the "export" item.
- * @param importFromXml The action to execute when the user clicks on the "import" item.
+ * @param onExport The action to execute when the user clicks on the "export" item.
+ * @param onImport The action to execute when the user clicks on the "import" item.
  * @param synchronizeWithAnotherDevice The action to execute when the user clicks on the
  * "synchronize" item.
  */
 @Composable
 private fun DropdownMenu(
-    exportToXml: () -> Unit = {},
-    importFromXml: () -> Unit = {},
+    onExport: () -> Unit = {},
+    onImport: () -> Unit = {},
     synchronizeWithAnotherDevice: () -> Unit = {},
 ) {
     Box {
@@ -482,14 +501,14 @@ private fun DropdownMenu(
                 text = { Text(stringResource(R.string.export_data)) },
                 onClick = {
                     isExpanded = false
-                    exportToXml()
+                    onExport()
                 },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.import_data)) },
                 onClick = {
                     isExpanded = false
-                    importFromXml()
+                    onImport()
                 },
             )
             DropdownMenuItem(

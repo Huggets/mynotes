@@ -1,4 +1,4 @@
-package com.huggets.mynotes.ui
+package com.huggets.mynotes.ui.activity
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDp
@@ -28,13 +28,20 @@ import androidx.compose.ui.unit.sp
 import com.huggets.mynotes.R
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.theme.*
+import com.huggets.mynotes.ui.AnimatedIconButton
+import com.huggets.mynotes.ui.BackPressHandler
+import com.huggets.mynotes.ui.ConfirmationDialog
+import com.huggets.mynotes.ui.Values
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteAssociationItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState.Companion.find
 
 /**
- * The UI for the note editing activity.
+ * The note editor.
+ *
+ * It allows to change the title and the content of a note, to add or remove associations with
+ * other notes, and to delete the note.
  *
  * @param appState The app state.
  * @param noteCreationDate The creation date of the note to edit.
@@ -46,7 +53,7 @@ import com.huggets.mynotes.ui.state.NoteItemUiState.Companion.find
  * @param deleteNote The lambda to call to delete a note.
  */
 @Composable
-fun NoteEditingActivity(
+fun NoteEditor(
     appState: State<NoteAppUiState>,
     noteCreationDate: Date,
     isNew: Boolean,
@@ -167,14 +174,14 @@ fun NoteEditingActivity(
 }
 
 /**
- * The main content of the note editing activity.
+ * The main content of the editor.
  *
  * @param appState The app state.
  * @param note The note to edit.
  * @param modifier The modifier to apply to the content.
  * @param textFieldColors The colors to use for the text fields.
  * @param contentProvider The lambda to call to get the content of the note.
- * @param onContentChanges The lambda to call when the content of the note changes.
+ * @param onContentChanges Called when the content of the note changes.
  * @param navigateToNote The lambda to call to navigate to another note.
  * @param createNote The lambda to call to create a new note.
  */
@@ -192,27 +199,27 @@ private fun MainContent(
     Column(modifier) {
         var tabIndex by rememberSaveable { mutableStateOf(0) }
 
-        var editingVisibilityState by remember { mutableStateOf(tabIndex == 0) }
-        var associationVisibilityState by remember { mutableStateOf(tabIndex == 1) }
+        var isContentEditorVisible by remember { mutableStateOf(tabIndex == 0) }
+        var areAssociatedNotesVisible by remember { mutableStateOf(tabIndex == 1) }
 
         Tabs(
             indexProvider = { tabIndex },
             onEditClicked = {
                 tabIndex = 0
-                editingVisibilityState = true
-                associationVisibilityState = false
+                isContentEditorVisible = true
+                areAssociatedNotesVisible = false
             },
             onAssociationClicked = {
                 tabIndex = 1
-                editingVisibilityState = false
-                associationVisibilityState = true
+                isContentEditorVisible = false
+                areAssociatedNotesVisible = true
             },
             modifier = Modifier.padding(Values.smallPadding, 0.dp),
         )
 
         Box {
             ContentEditor(
-                visibleStateProvider = { editingVisibilityState },
+                visibleStateProvider = { isContentEditorVisible },
                 contentProvider = contentProvider,
                 onContentChanges = onContentChanges,
                 textFieldColors = textFieldColors,
@@ -221,7 +228,7 @@ private fun MainContent(
             AssociatedNotes(
                 appState = appState,
                 note = note,
-                visibleStateProvider = { associationVisibilityState },
+                visibleStateProvider = { areAssociatedNotesVisible },
                 createNote = createNote,
                 navigateToNote = navigateToNote,
             )
@@ -230,7 +237,7 @@ private fun MainContent(
 }
 
 /**
- * The tabs to switch between the note editing and the associated notes.
+ * The tabs to switch between the content editor and the associated notes.
  *
  * @param indexProvider The lambda to call to get the index of the selected tab.
  * @param modifier The modifier to apply to this layout.
@@ -309,9 +316,9 @@ private fun TabIndicator(
 /**
  * The content editor.
  *
- * @param visibleStateProvider The lambda to call that returns whether the content editing is visible.
+ * @param visibleStateProvider The lambda to call that returns whether the content editor is visible.
  * @param contentProvider The lambda to call to get the content of the note.
- * @param onContentChanges The lambda to call when the content of the note changes. It takes the new
+ * @param onContentChanges Called when the content of the note changes. It takes the new
  * content as a parameter.
  * @param textFieldColors The colors to use for the text field.
  */
@@ -440,7 +447,7 @@ private fun AssociatedNoteElement(
 }
 
 /**
- * The app bar for the note editing screen.
+ * The app bar with a delete and save button.
  *
  * @param titleProvider Provides the title of the note.
  * @param onDelete Called when the delete button is pressed.
@@ -493,11 +500,15 @@ private fun AppBar(
 }
 
 private const val swipeDuration = 300
+
 private val swipeInLeftTransition =
     slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
+
 private val swipeInRightTransition =
     slideInHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
+
 private val swipeOutLeftTransition =
     slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { -(it + it * Values.Animation.slideOffset).toInt() }
+
 private val swipeOutRightTransition =
     slideOutHorizontally(Values.Animation.emphasized(swipeDuration)) { (it + it * Values.Animation.slideOffset).toInt() }
