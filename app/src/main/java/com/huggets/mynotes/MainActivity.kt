@@ -111,8 +111,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Set the display to the highest refresh rate available.
+     */
+    private fun setHighRefreshRate() {
+        // Request the default display
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display ?: return
+        } else {
+            windowManager.defaultDisplay
+        }
+
+        // Get best display mode
+        val modes = display.supportedModes
+        var bestMode = display.mode
+        for (mode in modes) {
+            if (mode.refreshRate > bestMode.refreshRate) {
+                bestMode = mode
+            }
+        }
+        window.attributes.preferredDisplayModeId = bestMode.modeId
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        setHighRefreshRate()
 
         // Only initialize the BluetoothConnectionManager once.
         if (bluetoothConnectionManager == null) {
