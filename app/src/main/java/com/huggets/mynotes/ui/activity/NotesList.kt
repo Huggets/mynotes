@@ -1,32 +1,63 @@
 package com.huggets.mynotes.ui.activity
 
 import android.util.Log
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ShapeDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.huggets.mynotes.*
 import com.huggets.mynotes.R
 import com.huggets.mynotes.data.Date
-import com.huggets.mynotes.theme.*
 import com.huggets.mynotes.ui.AnimatedFab
 import com.huggets.mynotes.ui.AnimatedIconButton
 import com.huggets.mynotes.ui.BackPressHandler
@@ -35,6 +66,12 @@ import com.huggets.mynotes.ui.Values
 import com.huggets.mynotes.ui.state.NoteAppUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState
 import com.huggets.mynotes.ui.state.NoteItemUiState.Companion.find
+import kotlin.collections.List
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.forEach
+import kotlin.collections.mutableListOf
+import kotlin.collections.set
 
 /**
  * A list of the main notes (notes that do not have a parent).
@@ -67,13 +104,13 @@ fun NotesList(
 ) {
     val inSelectionMode = rememberSaveable { mutableStateOf(false) }
     val notesSelectionState = rememberSaveable(saver = selectedNotesSaver) { mutableStateMapOf() }
-    val selectedNotesCount = rememberSaveable { mutableStateOf(0) }
+    val selectedNotesCount = rememberSaveable { mutableIntStateOf(0) }
 
     BackPressHandler {
         if (inSelectionMode.value) {
             // Unselect all notes
             inSelectionMode.value = false
-            selectedNotesCount.value = 0
+            selectedNotesCount.intValue = 0
 
             notesSelectionState.keys.forEach {
                 notesSelectionState[it] = false
@@ -149,7 +186,7 @@ fun NotesList(
                 displayDialog = showDeleteConfirmation,
                 message = stringResource(R.string.confirmation_message_delete_selected_notes),
                 onConfirm = {
-                    selectedNotesCount.value = 0
+                    selectedNotesCount.intValue = 0
                     inSelectionMode.value = false
 
                     val toDelete = mutableListOf<Date>()
@@ -287,17 +324,17 @@ private fun NotesList(
     val listState = rememberLazyListState()
 
     val lastListElementIndex = rememberSaveable {
-        mutableStateOf(listState.firstVisibleItemIndex)
+        mutableIntStateOf(listState.firstVisibleItemIndex)
     }
 
     if (listState.isScrollInProgress) {
         val currentIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
 
-        if (lastListElementIndex.value > currentIndex || currentIndex == 0) {
-            lastListElementIndex.value = currentIndex
+        if (lastListElementIndex.intValue > currentIndex || currentIndex == 0) {
+            lastListElementIndex.intValue = currentIndex
             onScrollUp()
-        } else if (lastListElementIndex.value < currentIndex) {
-            lastListElementIndex.value = currentIndex
+        } else if (lastListElementIndex.intValue < currentIndex) {
+            lastListElementIndex.intValue = currentIndex
             onScrollDown()
         }
     }
@@ -383,13 +420,11 @@ private fun NoteElement(
  *
  * @param isVisible Whether the selection should be visible.
  * @param modifier The modifier to apply to the surface.
- * @param color The color of the surface.
  */
 @Composable
 private fun AnimatedSelectionSurface(
     isVisible: () -> Boolean,
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.inverseSurface,
 ) {
     AnimatedVisibility(
         visible = isVisible(),
@@ -398,7 +433,7 @@ private fun AnimatedSelectionSurface(
         modifier = modifier,
     ) {
         Surface(
-            color = color,
+            color = MaterialTheme.colorScheme.inverseSurface,
             modifier = modifier.alpha(0.5f),
             content = {},
         )

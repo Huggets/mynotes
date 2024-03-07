@@ -12,9 +12,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import com.huggets.mynotes.bluetooth.BluetoothConnectionManager
@@ -123,6 +120,7 @@ class MainActivity : ComponentActivity() {
         val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             display ?: return
         } else {
+            @Suppress("DEPRECATION")
             windowManager.defaultDisplay
         }
 

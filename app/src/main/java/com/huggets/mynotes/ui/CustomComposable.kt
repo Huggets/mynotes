@@ -3,7 +3,6 @@ package com.huggets.mynotes.ui
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -120,7 +119,6 @@ fun BackPressHandler(onBackPress: () -> Unit = {}) {
  * @param isVisible A lambda that returns whether the FAB should be visible.
  * @param onClick The action to execute when the FAB is clicked.
  */
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AnimatedFab(
     text: String,

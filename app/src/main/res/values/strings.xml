@@ -30,7 +30,6 @@
     <string name="no_paired_devices">No paired devices</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="cancel">Cancel</string>
     <string name="error_export_xml_writing_file">Error when writing to file!</string>
     <string name="error_import_xml_reading_file">Error when reading file!</string>
     <string name="no_message">No message</string>

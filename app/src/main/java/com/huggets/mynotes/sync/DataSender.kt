@@ -35,7 +35,7 @@ class DataSender(
             )
 
             steps.forEach { sendData ->
-                val exception = sendData.invoke()
+                val exception = sendData()
                 if (exception != null) {
                     onFinish(exception)
                     return@launch

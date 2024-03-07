@@ -20,8 +20,7 @@ abstract class BufferReceiver<DataType>(
     /**
      * The total number of elements that will be received.
      */
-    var remoteElementCount: Int = 0
-        private set
+    private var remoteElementCount: Int = 0
 
     /**
      * Whether the total number of elements that will be received was fetched.

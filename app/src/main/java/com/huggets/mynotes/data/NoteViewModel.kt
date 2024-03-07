@@ -48,17 +48,17 @@ class NoteViewModel(
             )
         }
         bluetoothConnectionManager.setOnBluetoothActivationRequestDeniedCallback {
-            updateBluetoothState.invoke()
+            updateBluetoothState()
         }
         bluetoothConnectionManager.setOnBluetoothActivationRequestAcceptedCallback {
-            updateBluetoothState.invoke()
+            updateBluetoothState()
             updateBondedBluetoothDevices()
         }
         bluetoothConnectionManager.setOnBluetoothPermissionDeniedCallback {
-            updateBluetoothState.invoke()
+            updateBluetoothState()
         }
         bluetoothConnectionManager.setOnBluetoothPermissionGrantedCallback {
-            updateBluetoothState.invoke()
+            updateBluetoothState()
             bluetoothConnectionManager.requestBluetoothActivation()
         }
 

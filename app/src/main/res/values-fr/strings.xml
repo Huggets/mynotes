@@ -31,7 +31,6 @@
     <string name="no_paired_devices">Aucun appareil appairé</string>
     <string name="yes">Oui</string>
     <string name="no">Non</string>
-    <string name="cancel">Annuler</string>
     <string name="error_export_xml_writing_file">Erreur lors de l’écriture du fichier !</string>
     <string name="error_import_xml_reading_file">Erreur lors de la lecture du fichier !</string>
     <string name="no_message">Pas de message</string>
