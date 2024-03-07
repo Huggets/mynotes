@@ -1,8 +1,18 @@
 package com.huggets.mynotes.ui
 
 import android.os.Bundle
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOut
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -16,9 +26,9 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
-import com.google.accompanist.navigation.animation.AnimatedNavHost
-import com.google.accompanist.navigation.animation.composable
-import com.google.accompanist.navigation.animation.rememberAnimatedNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.huggets.mynotes.data.Date
 import com.huggets.mynotes.data.NoteViewModel
 import com.huggets.mynotes.theme.AppTheme
@@ -37,7 +47,6 @@ import com.huggets.mynotes.ui.state.NoteItemUiState
  * @param export The callback to export the notes to a file.
  * @param import The callback to import the notes from a file.
  */
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NoteApp(
     noteViewModel: NoteViewModel,
@@ -45,7 +54,7 @@ fun NoteApp(
     export: () -> Unit,
     import: () -> Unit,
 ) {
-    val navigationController = rememberAnimatedNavController()
+    val navigationController = rememberNavController()
     val appState = noteViewModel.uiState.collectAsStateWithLifecycle()
     val fabPosition = rememberSaveable(stateSaver = fabPositionSaver) {
         mutableStateOf(FabPosition.Center)
@@ -92,7 +101,7 @@ fun NoteApp(
 
     AppTheme {
         Surface {
-            AnimatedNavHost(
+            NavHost(
                 navController = navigationController,
                 startDestination = Destinations.generateViewNoteList(),
             ) {
@@ -215,36 +224,31 @@ private val exitScreenToLeftTransition =
                 -(it * slideOffset).toInt()
             })
 
-@OptIn(ExperimentalAnimationApi::class)
 private val enterNewNoteCenterTransition =
     (scaleIn(
         transformOrigin = TransformOrigin(0.5f, 1f),
         animationSpec = enterScreenFloatSpec,
     ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) })
 
-@OptIn(ExperimentalAnimationApi::class)
 private val enterNewNoteRightTransition =
     (scaleIn(
         transformOrigin = TransformOrigin(1f, 1f),
         animationSpec = enterScreenFloatSpec,
     ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) })
 
-@OptIn(ExperimentalAnimationApi::class)
 private val exitNewNoteCenterTransition =
     (scaleOut(
         transformOrigin = TransformOrigin(0.5f, 1f),
         animationSpec = exitScreenPermanentlyFloatSpec,
     ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) })
 
-@OptIn(ExperimentalAnimationApi::class)
 private val exitNewNoteRightTransition =
     (scaleOut(
         transformOrigin = TransformOrigin(1f, 1f),
         animationSpec = exitScreenPermanentlyFloatSpec,
     ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) })
 
-@OptIn(ExperimentalAnimationApi::class)
-private val enterViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+private val enterViewListTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition? =
     {
         if (isNewNote(initialState)) {
             null
@@ -253,8 +257,7 @@ private val enterViewListTransition: AnimatedContentScope<NavBackStackEntry>.() 
         }
     }
 
-@OptIn(ExperimentalAnimationApi::class)
-private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+private val exitViewListTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition? =
     {
         if (isNewNote(targetState)) {
             null
@@ -266,8 +269,7 @@ private val exitViewListTransition: AnimatedContentScope<NavBackStackEntry>.() -
 /**
  * Generates an [EnterTransition] for the [NoteEditor] based on the [FabPosition].
  */
-@OptIn(ExperimentalAnimationApi::class)
-private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? {
+private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition? {
     return {
         if (
             this.initialState.destination.route == Destinations.viewNoteListRoute &&
@@ -284,19 +286,16 @@ private fun makeEnterEditNoteTransition(fabPosition: State<FabPosition>): Animat
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
-private val exitEditNoteTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+private val exitEditNoteTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition? =
     { exitScreenToLeftTransition }
 
-@OptIn(ExperimentalAnimationApi::class)
-private val enterEditNotePopTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+private val enterEditNotePopTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition? =
     { enterScreenFromLeftTransition }
 
 /**
  * Generates an [ExitTransition] for the [NoteEditor] based on the [FabPosition].
  */
-@OptIn(ExperimentalAnimationApi::class)
-private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? {
+private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition? {
     return {
         if (
             targetState.destination.route == Destinations.viewNoteListRoute &&
@@ -313,12 +312,10 @@ private fun makeExitEditNoteTransition(fabPosition: State<FabPosition>): Animate
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
-private val enterDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition? =
+private val enterDataSyncingTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition? =
     { enterScreenFromRightTransition }
 
-@OptIn(ExperimentalAnimationApi::class)
-private val exitDataSyncingTransition: AnimatedContentScope<NavBackStackEntry>.() -> ExitTransition? =
+private val exitDataSyncingTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition? =
     { exitScreenToRightTransition }
 
 /**
