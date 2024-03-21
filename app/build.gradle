@@ -58,7 +58,7 @@ android {
 }
 
 dependencies {
-    def composeBom = platform('androidx.compose:compose-bom:2024.02.01')
+    def composeBom = platform('androidx.compose:compose-bom:2024.03.00')
     def navVersion = "2.7.7"
     def lifecycleVersion = "2.7.0"
     def roomVersion = "2.6.1"
