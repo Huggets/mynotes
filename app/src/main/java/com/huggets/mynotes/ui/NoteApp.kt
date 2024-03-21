@@ -7,8 +7,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOut
@@ -22,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -225,28 +222,16 @@ private val exitScreenToLeftTransition =
             })
 
 private val enterNewNoteCenterTransition =
-    (scaleIn(
-        transformOrigin = TransformOrigin(0.5f, 1f),
-        animationSpec = enterScreenFloatSpec,
-    ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) })
+    slideIn(enterScreenIntOffsetSpec) { IntOffset(0, it.height) }
 
 private val enterNewNoteRightTransition =
-    (scaleIn(
-        transformOrigin = TransformOrigin(1f, 1f),
-        animationSpec = enterScreenFloatSpec,
-    ) + slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) })
+    slideIn(enterScreenIntOffsetSpec) { IntOffset(it.width, it.height) }
 
 private val exitNewNoteCenterTransition =
-    (scaleOut(
-        transformOrigin = TransformOrigin(0.5f, 1f),
-        animationSpec = exitScreenPermanentlyFloatSpec,
-    ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) })
+    slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(0, it.height) }
 
 private val exitNewNoteRightTransition =
-    (scaleOut(
-        transformOrigin = TransformOrigin(1f, 1f),
-        animationSpec = exitScreenPermanentlyFloatSpec,
-    ) + slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) })
+    slideOut(exitScreenPermanentlyIntOffsetSpec) { IntOffset(it.width, it.height) }
 
 private val enterViewListTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition? =
     {
