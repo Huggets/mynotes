@@ -58,9 +58,9 @@ android {
 }
 
 dependencies {
-    def composeBom = platform('androidx.compose:compose-bom:2024.03.00')
+    def composeBom = platform('androidx.compose:compose-bom:2024.06.00')
     def navVersion = "2.7.7"
-    def lifecycleVersion = "2.7.0"
+    def lifecycleVersion = "2.8.4"
     def roomVersion = "2.6.1"
 
     // Compose
@@ -85,8 +85,8 @@ dependencies {
     ksp "androidx.room:room-compiler:$roomVersion"
     implementation "androidx.room:room-ktx:$roomVersion"
 
-    implementation "androidx.activity:activity-compose:1.8.2"
-    implementation "androidx.core:core-ktx:1.12.0"
+    implementation "androidx.activity:activity-compose:1.9.1"
+    implementation "androidx.core:core-ktx:1.13.1"
 }
 
 ksp {
