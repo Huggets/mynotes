@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id "com.google.devtools.ksp"
+    id "org.jetbrains.kotlin.plugin.compose"
 }
 
 def keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -17,7 +18,7 @@ android {
         minSdk 23
         targetSdk 35
         versionCode 6
-        versionName '0.3.3'
+        versionName '0.3.4'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -45,9 +46,6 @@ android {
     buildFeatures {
         compose true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.2"
-    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -58,9 +56,9 @@ android {
 }
 
 dependencies {
-    def composeBom = platform('androidx.compose:compose-bom:2024.06.00')
-    def navVersion = "2.7.7"
-    def lifecycleVersion = "2.8.4"
+    def composeBom = platform('androidx.compose:compose-bom:2025.01.01')
+    def navVersion = "2.8.6"
+    def lifecycleVersion = "2.8.7"
     def roomVersion = "2.6.1"
 
     // Compose
@@ -85,8 +83,8 @@ dependencies {
     ksp "androidx.room:room-compiler:$roomVersion"
     implementation "androidx.room:room-ktx:$roomVersion"
 
-    implementation "androidx.activity:activity-compose:1.9.1"
-    implementation "androidx.core:core-ktx:1.13.1"
+    implementation "androidx.activity:activity-compose:1.10.0"
+    implementation "androidx.core:core-ktx:1.15.0"
 }
 
 ksp {
